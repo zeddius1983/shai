@@ -58,8 +58,9 @@ _shai_save_context() {
 
     # Don't overwrite context when the last command was shai itself —
     # keep the previous command's context so 'shai help' sees the real error
+    local _cmd_name="${SHAI_CMD_NAME:-shai}"
     case "$last_cmd" in
-        shai*) return $exit_code ;;
+        "$_cmd_name"*) return $exit_code ;;
     esac
 
     if [ -n "$TMUX" ]; then
@@ -285,4 +286,9 @@ _shai() {
 }
 
 # noglob prevents zsh from expanding ?, *, ! etc. before passing args to shai
-alias shai='noglob _shai'
+SHAI_CMD_NAME="${SHAI_CMD_NAME:-shai}"
+if [ -n "$ZSH_VERSION" ]; then
+    eval "alias ${SHAI_CMD_NAME}='noglob _shai'"
+else
+    eval "${SHAI_CMD_NAME}() { _shai \"\$@\"; }"
+fi

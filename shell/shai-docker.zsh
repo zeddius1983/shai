@@ -28,8 +28,9 @@ _shai_save_context() {
     local last_cmd
     last_cmd=$(fc -ln -1 2>/dev/null | sed 's/^[[:space:]]*//')
 
+    local _cmd_name="${SHAI_CMD_NAME:-shai}"
     case "$last_cmd" in
-        shai*) return $exit_code ;;
+        "$_cmd_name"*) return $exit_code ;;
     esac
 
     local _shai_fallback=0
@@ -56,7 +57,7 @@ autoload -Uz add-zsh-hook
 add-zsh-hook precmd _shai_save_context
 
 # shai wrapper: delegates to Docker container
-shai() {
+_shai_docker_wrapper() {
     mkdir -p "$_shai_config_dir" "$(dirname "$_shai_context_file")"
 
     local _container_bin="docker"
@@ -76,3 +77,6 @@ shai() {
         -v "${_shai_cache_dir}:/root/.cache/shai:ro" \
         "$SHAI_IMAGE" "$@"
 }
+
+SHAI_CMD_NAME="${SHAI_CMD_NAME:-shai}"
+eval "${SHAI_CMD_NAME}() { _shai_docker_wrapper \"\$@\"; }"
