@@ -254,13 +254,14 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             while True:
                 choice = click.prompt("    Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
+                    console.print()
                     subprocess.run(["bash", "-c", command])
                     break
                 elif choice == "n":
                     break
                 elif choice == "e":
                     command = _edit_inline(command)
-                    console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                    console.print(_get_padded_renderable(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan")))
                 else:
                     console.print("[dim]Enter y, n, or e[/dim]")
         except Exception as e:
