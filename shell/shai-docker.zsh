@@ -70,12 +70,33 @@ _shai_docker_wrapper() {
         fi
     fi
 
-    "$_container_bin" run --rm -i \
-        -e OPENAI_API_KEY \
-        -e ANTHROPIC_API_KEY \
-        -v "${_shai_config_dir}:/root/.config/shai:ro" \
-        -v "${_shai_cache_dir}:/root/.cache/shai:ro" \
-        "$SHAI_IMAGE" "$@"
+    # Check if --raw or -r was passed — only scan leading flags, stop at first non-flag word
+    # Also skip glow for /context, /stats and any /subcommand (they output rich ANSI panels)
+    local _raw=0
+    for _arg in "$@"; do
+        case "$_arg" in
+            --raw|-r) _raw=1 ;;
+            /*)       _raw=1 ; break ;;  # /config, /context, /stats output rich panels, not markdown
+            -*) ;;          # other flag, keep scanning
+            *) break ;;     # first non-flag word: stop
+        esac
+    done
+
+    local _cmd=("$_container_bin" run --rm)
+    [ -t 0 ] || _cmd+=(-i)
+    _cmd+=(
+        -e OPENAI_API_KEY
+        -e ANTHROPIC_API_KEY
+        -v "${_shai_config_dir}:/root/.config/shai:ro"
+        -v "${_shai_cache_dir}:/root/.cache/shai:ro"
+        "$SHAI_IMAGE"
+    )
+
+    if [ "$_raw" -eq 0 ] && command -v glow > /dev/null 2>&1; then
+        "${_cmd[@]}" "$@" | glow -
+    else
+        "${_cmd[@]}" "$@"
+    fi
 }
 
 SHAI_CMD_NAME="${SHAI_CMD_NAME:-shai}"
