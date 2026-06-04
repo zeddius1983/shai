@@ -124,26 +124,8 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
         except KeyboardInterrupt:
             pass
         print()
-    elif shutil.which("glow"):
-        # Buffer with a spinner, then render with glow
-        try:
-            with Live(
-                Text("  thinking…", style="dim"),
-                console=console,
-                refresh_per_second=12,
-                transient=True,
-            ) as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    word_count = len(buffer.split())
-                    live.update(Text(f"  thinking… ({word_count} words)", style="dim"))
-        except KeyboardInterrupt:
-            pass
-        if buffer:
-            rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
-            subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
     else:
-        # Fallback: live rich markdown rendering
+        # Live rich markdown rendering
         try:
             with Live(
                 Text("  thinking…", style="dim"),
