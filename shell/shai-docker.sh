@@ -15,6 +15,11 @@ _shai_context_file="$_shai_cache_dir/context"
 _shai_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shai"
 SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/youruser/shai:latest}"
 
+_shai_container="docker"
+if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+    _shai_container="podman"
+fi
+
 # Collect host system info once at source time and export for the container
 _shai_collect_host_info() {
     local _uname
@@ -87,7 +92,7 @@ fi
 _shai_docker_cmd() {
     local _stdin_flag=()
     [ -t 0 ] || _stdin_flag=(-i)
-    echo_cmd=(docker run --rm "${_stdin_flag[@]}"
+    echo_cmd=("$_shai_container" run --rm "${_stdin_flag[@]}"
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
         -e SHAI_HOST_OS
@@ -107,7 +112,7 @@ _shai_docker_cmd() {
 _shai_do() {
     mkdir -p "$_shai_config_dir" "$_shai_cache_dir"
 
-    local _cmd=(docker run --rm
+    local _cmd=("$_shai_container" run --rm
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
         -e SHAI_HOST_OS
@@ -219,7 +224,7 @@ _shai() {
     fi
 
     # Build docker command as an array to avoid any glob re-expansion
-    local _cmd=(docker run --rm)
+    local _cmd=("$_shai_container" run --rm)
     [ -t 0 ] || _cmd+=(-i)
     _cmd+=(
         -e OPENAI_API_KEY
