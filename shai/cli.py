@@ -146,7 +146,7 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
             render_width = min(90, term_width - 12) if term_width > 20 else term_width
 
             def _get_renderable(text):
-                t = Table.grid(padding=(0, 4, 0, 8))
+                t = Table.grid(padding=(0, 4, 0, 8), pad_edge=True)
                 t.add_column(width=render_width)
                 t.add_row(Markdown(text))
                 return t
