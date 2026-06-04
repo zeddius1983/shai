@@ -24,8 +24,8 @@ from .providers import get_provider
 
 import os as _os
 _term_width = _os.get_terminal_size().columns if _os.isatty(1) else 120
-console = Console(width=_term_width)
-err_console = Console(stderr=True, width=_term_width)
+console = Console()
+err_console = Console(stderr=True)
 
 
 def _find_bash4() -> str:
@@ -161,7 +161,7 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                             
                             # Tail the text to avoid exceeding terminal height and causing duplication
                             lines = buffer.splitlines()
-                            term_height = _os.get_terminal_size().lines if _os.isatty(1) else 24
+                            term_height = console.height if console.height is not None else 24
                             max_lines = max(10, term_height - 6)
                             if len(lines) > max_lines:
                                 tailed_text = "\n".join(lines[-max_lines:])
