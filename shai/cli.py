@@ -158,7 +158,17 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                     ) as live:
                         for chunk in stream:
                             buffer += chunk
-                            live.update(_get_renderable(buffer))
+                            
+                            # Tail the text to avoid exceeding terminal height and causing duplication
+                            lines = buffer.splitlines()
+                            term_height = _os.get_terminal_size().lines if _os.isatty(1) else 24
+                            max_lines = max(10, term_height - 6)
+                            if len(lines) > max_lines:
+                                tailed_text = "\n".join(lines[-max_lines:])
+                            else:
+                                tailed_text = buffer
+                                
+                            live.update(_get_renderable(tailed_text))
                 except KeyboardInterrupt:
                     pass
 
