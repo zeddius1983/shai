@@ -4,8 +4,8 @@
 # Usage: add to ~/.zshrc:
 #   source /path/to/shai-docker.zsh
 #
-# Optional: set image name (default: ghcr.io/youruser/shai:latest)
-#   export SHAI_IMAGE="ghcr.io/youruser/shai:latest"
+# Optional: set image name (default: ghcr.io/zeddius1983/shell-assistant:latest)
+#   export SHAI_IMAGE="ghcr.io/zeddius1983/shell-assistant:latest"
 
 # Only load in zsh
 [ -n "$ZSH_VERSION" ] || return 0

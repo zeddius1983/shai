@@ -4,7 +4,7 @@
 #   source /path/to/shai/shell/shai-docker.sh
 #
 # Override the image:
-#   export SHAI_IMAGE="ghcr.io/youruser/shai:latest"
+#   export SHAI_IMAGE="ghcr.io/zeddius1983/shell-assistant:latest"
 
 if [ "$(uname)" = "Darwin" ]; then
     _shai_cache_dir="$HOME/Library/Caches/shai"
@@ -13,7 +13,7 @@ else
 fi
 _shai_context_file="$_shai_cache_dir/context"
 _shai_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shai"
-SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/youruser/shai:latest}"
+SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/zeddius1983/shell-assistant:latest}"
 
 _shai_container="docker"
 if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
