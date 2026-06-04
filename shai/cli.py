@@ -127,6 +127,7 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
     else:
         # Buffered rich markdown rendering with dynamic spinner
         try:
+            console.print()
             with Live(
                 Text("  thinking…", style="dim"),
                 console=console,
@@ -141,12 +142,12 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
             pass
 
         if buffer:
-            # Limit maximum width to 90 characters and pad right by 4, left by 8 spaces
+            # Limit maximum width to 90 characters and pad left/right by 4 spaces
             term_width = console.width if console.width is not None else 80
-            render_width = min(90, term_width - 12) if term_width > 20 else term_width
+            render_width = min(90, term_width - 8) if term_width > 20 else term_width
 
             def _get_renderable(text):
-                t = Table.grid(padding=(0, 4, 0, 8), pad_edge=True)
+                t = Table.grid(padding=(0, 4, 0, 4), pad_edge=True)
                 t.add_column(width=render_width)
                 t.add_row(Markdown(text))
                 return t
