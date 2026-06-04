@@ -109,8 +109,8 @@ _shai_docker_cmd() {
         -e SHAI_HOST_PKG
         -e SHAI_HOST_CONFIG_DIR
         -e SHAI_HOST_CACHE_DIR
-        -v "${_shai_config_dir}:/root/.config/shai:ro"
-        -v "${_shai_cache_dir}:/root/.cache/shai:ro"
+        -v "${_shai_config_dir}:/home/shai/.config/shai:ro"
+        -v "${_shai_cache_dir}:/home/shai/.cache/shai:ro"
         "$SHAI_IMAGE"
     )
 }
@@ -141,8 +141,8 @@ _shai_do() {
         -e SHAI_HOST_PKG
         -e SHAI_HOST_CONFIG_DIR
         -e SHAI_HOST_CACHE_DIR
-        -v "${_shai_config_dir}:/root/.config/shai:ro"
-        -v "${_shai_cache_dir}:/root/.cache/shai:ro"
+        -v "${_shai_config_dir}:/home/shai/.config/shai:ro"
+        -v "${_shai_cache_dir}:/home/shai/.cache/shai:ro"
         "$SHAI_IMAGE"
         do
     )
@@ -270,8 +270,8 @@ _shai() {
         -e SHAI_HOST_PKG
         -e SHAI_HOST_CONFIG_DIR
         -e SHAI_HOST_CACHE_DIR
-        -v "${_shai_config_dir}:/root/.config/shai:ro"
-        -v "${_shai_cache_dir}:/root/.cache/shai:ro"
+        -v "${_shai_config_dir}:/home/shai/.config/shai:ro"
+        -v "${_shai_cache_dir}:/home/shai/.cache/shai:ro"
         "$SHAI_IMAGE"
     )
 

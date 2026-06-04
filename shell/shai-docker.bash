@@ -76,8 +76,8 @@ _shai_docker_wrapper() {
         -e ANTHROPIC_API_KEY \
         -e TERM \
         -e COLORTERM \
-        -v "${_shai_config_dir}:/root/.config/shai:ro" \
-        -v "${_shai_cache_dir}:/root/.cache/shai:ro" \
+        -v "${_shai_config_dir}:/home/shai/.config/shai:ro" \
+        -v "${_shai_cache_dir}:/home/shai/.cache/shai:ro" \
         "$SHAI_IMAGE" "$@"
 }
 
