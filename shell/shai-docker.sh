@@ -233,7 +233,7 @@ _shai() {
 
     # Build docker command as an array to avoid any glob re-expansion
     local _stdin_flag=(-i)
-    [ -t 0 ] && _stdin_flag=(-it)
+    [ -t 0 ] && [ -t 1 ] && _stdin_flag=(-it)
     local _cmd=("$_shai_container" run --rm "${_stdin_flag[@]}")
     if [ "$(uname)" = "Linux" ]; then
         _cmd+=(--network=host)
