@@ -74,6 +74,8 @@ _shai_docker_wrapper() {
     "$_container_bin" run --rm "${_tty_flags[@]}" \
         -e OPENAI_API_KEY \
         -e ANTHROPIC_API_KEY \
+        -e TERM \
+        -e COLORTERM \
         -v "${_shai_config_dir}:/root/.config/shai:ro" \
         -v "${_shai_cache_dir}:/root/.cache/shai:ro" \
         "$SHAI_IMAGE" "$@"

@@ -100,6 +100,8 @@ _shai_docker_cmd() {
     echo_cmd=("$_container_bin" run --rm "${_stdin_flag[@]}"
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
@@ -130,6 +132,8 @@ _shai_do() {
     local _cmd=("$_container_bin" run --rm
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
@@ -257,6 +261,8 @@ _shai() {
     _cmd+=(
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
