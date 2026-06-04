@@ -85,9 +85,18 @@ fi
 
 # Build the base docker run command into an array
 _shai_docker_cmd() {
+    local _container_bin="docker"
+    if ! command -v docker >/dev/null 2>&1; then
+        if command -v podman >/dev/null 2>&1; then
+            _container_bin="podman"
+        else
+            echo "Error: Neither docker nor podman was found in PATH." >&2
+            return 1
+        fi
+    fi
     local _stdin_flag=()
     [ -t 0 ] || _stdin_flag=(-i)
-    echo_cmd=(docker run --rm "${_stdin_flag[@]}"
+    echo_cmd=("$_container_bin" run --rm "${_stdin_flag[@]}"
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
         -e SHAI_HOST_OS
@@ -107,7 +116,17 @@ _shai_docker_cmd() {
 _shai_do() {
     mkdir -p "$_shai_config_dir" "$_shai_cache_dir"
 
-    local _cmd=(docker run --rm
+    local _container_bin="docker"
+    if ! command -v docker >/dev/null 2>&1; then
+        if command -v podman >/dev/null 2>&1; then
+            _container_bin="podman"
+        else
+            echo "Error: Neither docker nor podman was found in PATH." >&2
+            return 1
+        fi
+    fi
+
+    local _cmd=("$_container_bin" run --rm
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
         -e SHAI_HOST_OS
@@ -218,8 +237,18 @@ _shai() {
         return
     fi
 
+    local _container_bin="docker"
+    if ! command -v docker >/dev/null 2>&1; then
+        if command -v podman >/dev/null 2>&1; then
+            _container_bin="podman"
+        else
+            echo "Error: Neither docker nor podman was found in PATH." >&2
+            return 1
+        fi
+    fi
+
     # Build docker command as an array to avoid any glob re-expansion
-    local _cmd=(docker run --rm)
+    local _cmd=("$_container_bin" run --rm)
     [ -t 0 ] || _cmd+=(-i)
     _cmd+=(
         -e OPENAI_API_KEY

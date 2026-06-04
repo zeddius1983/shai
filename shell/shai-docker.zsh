@@ -59,7 +59,17 @@ add-zsh-hook precmd _shai_save_context
 shai() {
     mkdir -p "$_shai_config_dir" "$(dirname "$_shai_context_file")"
 
-    docker run --rm -i \
+    local _container_bin="docker"
+    if ! command -v docker >/dev/null 2>&1; then
+        if command -v podman >/dev/null 2>&1; then
+            _container_bin="podman"
+        else
+            echo "Error: Neither docker nor podman was found in PATH." >&2
+            return 1
+        fi
+    fi
+
+    "$_container_bin" run --rm -i \
         -e OPENAI_API_KEY \
         -e ANTHROPIC_API_KEY \
         -v "${_shai_config_dir}:/root/.config/shai:ro" \
