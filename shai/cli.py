@@ -24,8 +24,8 @@ from .providers import get_provider
 
 import os as _os
 _term_width = _os.get_terminal_size().columns if _os.isatty(1) else 120
-console = Console()
-err_console = Console(stderr=True)
+console = Console(width=_term_width)
+err_console = Console(stderr=True, width=_term_width)
 
 
 def _find_bash4() -> str:
@@ -124,8 +124,8 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
         except KeyboardInterrupt:
             pass
         print()
-    else:
-        # Live rich markdown rendering
+    elif shutil.which("glow"):
+        # Buffer with a spinner, then render with glow
         try:
             with Live(
                 Text("  thinking…", style="dim"),
@@ -133,48 +133,22 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                 refresh_per_second=12,
                 transient=True,
             ) as live:
-                stream = provider.stream(system, prompt)
-                first_chunk = next(stream, None)
-                if first_chunk is not None:
-                    buffer += first_chunk
-
-            if buffer:
-                # Limit maximum width to 90 characters and pad left/right by 4 spaces
-                render_width = min(90, _term_width - 8) if _term_width > 20 else _term_width
-
-                def _get_renderable(text):
-                    t = Table.grid(padding=(0, 4))
-                    t.add_column(width=render_width)
-                    t.add_row(Markdown(text))
-                    return t
-
-                try:
-                    with Live(
-                        _get_renderable(buffer),
-                        console=console,
-                        refresh_per_second=12,
-                        transient=True,
-                        vertical_overflow="crop",
-                    ) as live:
-                        for chunk in stream:
-                            buffer += chunk
-                            
-                            # Tail the text to avoid exceeding terminal height and causing duplication
-                            lines = buffer.splitlines()
-                            term_height = console.height if console.height is not None else 24
-                            max_lines = max(10, term_height - 6)
-                            if len(lines) > max_lines:
-                                tailed_text = "\n".join(lines[-max_lines:])
-                            else:
-                                tailed_text = buffer
-                                
-                            live.update(_get_renderable(tailed_text))
-                except KeyboardInterrupt:
-                    pass
-
-                # Final print to console to support standard scrollback without duplication
-                if buffer:
-                    console.print(_get_renderable(buffer))
+                for chunk in provider.stream(system, prompt):
+                    buffer += chunk
+                    word_count = len(buffer.split())
+                    live.update(Text(f"  thinking… ({word_count} words)", style="dim"))
+        except KeyboardInterrupt:
+            pass
+        if buffer:
+            rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
+            subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
+    else:
+        # Fallback: live rich markdown rendering
+        try:
+            with Live(Markdown(""), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
+                for chunk in provider.stream(system, prompt):
+                    buffer += chunk
+                    live.update(Markdown(buffer))
         except KeyboardInterrupt:
             pass
 
