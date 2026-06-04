@@ -145,10 +145,22 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
     else:
         # Fallback: live rich markdown rendering
         try:
-            with Live(Markdown(""), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    live.update(Markdown(buffer))
+            with Live(
+                Text("  thinking…", style="dim"),
+                console=console,
+                refresh_per_second=12,
+                transient=True,
+            ) as live:
+                stream = provider.stream(system, prompt)
+                first_chunk = next(stream, None)
+                if first_chunk is not None:
+                    buffer += first_chunk
+
+            if buffer:
+                with Live(Markdown(buffer), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
+                    for chunk in stream:
+                        buffer += chunk
+                        live.update(Markdown(buffer))
         except KeyboardInterrupt:
             pass
 
