@@ -9,6 +9,11 @@
 
 set -euo pipefail
 
+# If running locally from the repository, delegate directly to the local setup.sh
+if [ -f "$(dirname "$0")/shell/setup.sh" ]; then
+    exec "$(dirname "$0")/shell/setup.sh" "$@"
+fi
+
 REPO_URL="https://raw.githubusercontent.com/zeddius1983/shell-assistant/main"
 TMP_DIR="$(mktemp -d)"
 
@@ -20,7 +25,5 @@ mkdir -p "$TMP_DIR/shell"
 
 curl -sSLo "$TMP_DIR/shell/setup.sh" "$REPO_URL/shell/setup.sh"
 chmod +x "$TMP_DIR/shell/setup.sh"
-
-curl -sSLo "$TMP_DIR/shell/starship.toml" "$REPO_URL/shell/starship.toml"
 
 "$TMP_DIR/shell/setup.sh" "$@"
