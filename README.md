@@ -27,19 +27,19 @@ With tmux, the full screen output (including stderr) is captured. Without tmux, 
 
 ## Installation
 
-### Method 1: Shai Toolbox (Recommended for macOS/Linux)
+### Method 1: Shai Installer (Recommended for macOS/Linux)
 
-Shai works out of the box in any terminal, but we provide a cross-platform, idempotent **interactive installer** to perfectly configure your environment with shai and the best modern terminal utilities (which Shai can deeply integrate with).
+Shai works out of the box in any terminal, but we provide a cross-platform, idempotent **interactive installer** to configure your environment with shai.
 
-Instead of installing things manually, run the toolbox directly from GitHub:
+Run the installer directly from GitHub:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh)"
 ```
 
-This launches the **Shai Toolbox interactive menu**, allowing you to seamlessly toggle `[x]` install or `[ ]` completely uninstall components such as `starship`, `eza`, `bat`, `git-delta`, `fzf`, `atuin`, `glow`, and more natively via `brew` or `apt`.
+This launches the **Shai interactive installer**, allowing you to configure `shai` and toggle `implicit mode` on or off.
 
-If you prefer to install all components silently without the interactive menu:
+If you prefer to install silently:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh | bash -s -- --all
 ```
@@ -89,7 +89,10 @@ uv tool install .
 
 ## Uninstallation
 
-If you installed via the **Shai Toolbox** (Method 1), you can simply run the installer again and press <kbd>Space</kbd> to uncheck `[ ] shai` (and any other components you wish to remove), then press <kbd>Enter</kbd> to confirm. Your `.zshrc` block will be neatly cleaned up.
+If you installed via the **Shai Installer** (Method 1), you can uninstall everything by running the setup script with the `--uninstall` flag:
+```bash
+./shell/setup.sh --uninstall
+```
 
 If you installed via **pipx** (Method 2):
 ```bash
@@ -101,12 +104,12 @@ And manually remove the `source "$(shai --shell-path zsh)"` line from your `~/.z
 
 ## Usage
 
-### Implicit Mode (Ctrl+Space)
+### Implicit Mode (Alt+s)
 
-If you enabled `[x] shai implicit mode` in the Shai Toolbox installer, you can type any question directly into your terminal and press `Ctrl+Space`:
+If you enabled `[x] shai implicit mode` in the installer, you can type any question directly into your terminal and press `Alt+s`:
 
 ```bash
-find the largest file in this folder[Press Ctrl+Space]
+find the largest file in this folder[Press Alt+s]
 # Instantly expands and runs: shai find the largest file in this folder
 ```
 
