@@ -103,6 +103,16 @@ def _unwrap_markdown_fence(text: str) -> str:
     return match.group(1) if match else text
 
 
+def _get_padded_renderable(renderable):
+    """Pads a renderable left and right by 4 spaces and limits the maximum width to 90 characters."""
+    term_width = console.width if console.width is not None else 80
+    render_width = min(90, term_width - 8) if term_width > 20 else term_width
+    t = Table.grid(padding=(0, 4, 0, 4), pad_edge=True)
+    t.add_column(width=render_width)
+    t.add_row(renderable)
+    return t
+
+
 def build_prompt(question: str, context: Optional[str]) -> str:
     if context:
         return (
@@ -142,17 +152,7 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
             pass
 
         if buffer:
-            # Limit maximum width to 90 characters and pad left/right by 4 spaces
-            term_width = console.width if console.width is not None else 80
-            render_width = min(90, term_width - 8) if term_width > 20 else term_width
-
-            def _get_renderable(text):
-                t = Table.grid(padding=(0, 4, 0, 4), pad_edge=True)
-                t.add_column(width=render_width)
-                t.add_row(Markdown(text))
-                return t
-
-            console.print(_get_renderable(buffer))
+            console.print(_get_padded_renderable(Markdown(buffer)))
 
 
 @click.command(
@@ -227,6 +227,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             system = DO_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
             provider = get_provider(cfg.get_active_provider())
             buffer = ""
+            console.print()
             with Live(
                 Text("  thinking…", style="dim"),
                 console=console,
@@ -241,17 +242,17 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             cleaned = textwrap.dedent(_unwrap_markdown_fence(buffer))
             match = re.search(r'```bash\n(.*?)```', cleaned, re.DOTALL)
             if not match:
-                console.print(cleaned)
+                console.print(_get_padded_renderable(Markdown(cleaned)))
                 return
             command = match.group(1).strip()
             explanation = cleaned[:match.start()].strip()
 
             if explanation:
-                console.print(explanation)
-            console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                console.print(_get_padded_renderable(Markdown(explanation)))
+            console.print(_get_padded_renderable(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan")))
 
             while True:
-                choice = click.prompt("Run this command? [Y/n/e]", default="y").strip().lower()
+                choice = click.prompt("    Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
                     subprocess.run(["bash", "-c", command])
                     break
