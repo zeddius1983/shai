@@ -15,12 +15,10 @@ TMP_DIR="$(mktemp -d)"
 # Cleanup on exit
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo "==> Downloading Shai Toolbox Installer..."
+echo "==> Downloading Shai Installer..."
 mkdir -p "$TMP_DIR/shell"
 
 curl -sSLo "$TMP_DIR/shell/setup.sh" "$REPO_URL/shell/setup.sh"
 chmod +x "$TMP_DIR/shell/setup.sh"
-
-curl -sSLo "$TMP_DIR/shell/starship.toml" "$REPO_URL/shell/starship.toml"
 
 "$TMP_DIR/shell/setup.sh" "$@"

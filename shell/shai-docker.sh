@@ -15,6 +15,13 @@ _shai_context_file="$_shai_cache_dir/context"
 _shai_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shai"
 SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/youruser/shai:latest}"
 
+unalias shai 2>/dev/null || true
+
+_shai_container="docker"
+if ! command -v docker >/dev/null 2>&1 && command -v podman >/dev/null 2>&1; then
+    _shai_container="podman"
+fi
+
 # Collect host system info once at source time and export for the container
 _shai_collect_host_info() {
     local _uname
@@ -85,11 +92,13 @@ fi
 
 # Build the base docker run command into an array
 _shai_docker_cmd() {
-    local _stdin_flag=()
-    [ -t 0 ] || _stdin_flag=(-i)
-    echo_cmd=(docker run --rm "${_stdin_flag[@]}"
+    local _stdin_flag=(-i)
+    [ -t 0 ] && _stdin_flag=(-it)
+    echo_cmd=("$_shai_container" run --rm "${_stdin_flag[@]}"
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
@@ -107,9 +116,12 @@ _shai_docker_cmd() {
 _shai_do() {
     mkdir -p "$_shai_config_dir" "$_shai_cache_dir"
 
-    local _cmd=(docker run --rm
+    local _cmd=("$_shai_container" run --rm
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
+        -e FORCE_COLOR=1
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
@@ -124,22 +136,42 @@ _shai_do() {
     )
 
     # Capture full LLM response
+    local start_time
+    start_time=$(date +%s)
+    (
+        while true; do
+            local current_time
+            current_time=$(date +%s)
+            local elapsed=$(( current_time - start_time ))
+            printf '    \033[2mthinking… (%ds)\033[0m\r' "$elapsed"
+            sleep 1
+        done
+    ) &
+    local spinner_pid=$!
+    disown "$spinner_pid" 2>/dev/null
+
     local response
     response=$("${_cmd[@]}" "$@" 2>&1)
 
-    # Display with glow if available, otherwise plain
-    if command -v glow > /dev/null 2>&1; then
-        printf '%s\n' "$response" | glow -
-    else
-        printf '%s\n' "$response"
+    kill "$spinner_pid" 2>/dev/null
+    printf '\r\033[K'
+
+    # Extract base64 command
+    local b64_cmd
+    b64_cmd=$(printf '%s\n' "$response" | grep '^__SHAI_CMD_B64__:' | cut -d: -f2-)
+
+    local extracted_cmd=""
+    if [ -n "$b64_cmd" ]; then
+        extracted_cmd=$(printf '%s' "$b64_cmd" | base64 -d 2>/dev/null || printf '%s' "$b64_cmd" | base64 -D 2>/dev/null || printf '%s' "$b64_cmd" | base64 --decode 2>/dev/null)
     fi
 
-    # Extract first ```bash ... ``` block
-    local extracted_cmd
-    extracted_cmd=$(printf '%s\n' "$response" | awk '/^```bash$/{found=1;next} found && /^```/{exit} found{print}')
+    # Display the clean response (without the base64 command marker line)
+    local clean_response
+    clean_response=$(printf '%s\n' "$response" | grep -v '^__SHAI_CMD_B64__:')
+    printf '%s\n' "$clean_response"
 
     if [ -z "$extracted_cmd" ]; then
-        printf '\n\033[33mNo executable command found in response.\033[0m\n'
+        printf '\n    \033[33mNo executable command found in response.\033[0m\n'
         return 1
     fi
 
@@ -170,9 +202,9 @@ _shai_do() {
     fi
 
     printf '\n'
-    [ "$dangerous" -eq 1 ] && printf '\033[33m⚠  Warning: command may be destructive\033[0m\n'
-    [ -n "$compat_warn" ] && printf '\033[33m⚠  Compatibility: %s\033[0m\n' "$compat_warn"
-    printf '\033[1mRun? [Y/e/n]\033[0m  '
+    [ "$dangerous" -eq 1 ] && printf '    \033[33m⚠  Warning: command may be destructive\033[0m\n'
+    [ -n "$compat_warn" ] && printf '    \033[33m⚠  Compatibility: %s\033[0m\n' "$compat_warn"
+    printf '    \033[1mRun? [Y/e/n]\033[0m  '
 
     local answer
     read -r answer
@@ -182,7 +214,7 @@ _shai_do() {
             eval "$extracted_cmd"
             ;;
         e|E)
-            printf 'Edit: '
+            printf '    Edit: '
             if [ -n "$ZSH_VERSION" ]; then
                 local edited="$extracted_cmd"
                 vared edited
@@ -195,7 +227,7 @@ _shai_do() {
             fi
             ;;
         *)
-            printf 'Cancelled.\n'
+            printf '    Cancelled.\n'
             ;;
     esac
 }
@@ -219,11 +251,13 @@ _shai() {
     fi
 
     # Build docker command as an array to avoid any glob re-expansion
-    local _cmd=(docker run --rm)
-    [ -t 0 ] || _cmd+=(-i)
-    _cmd+=(
+    local _stdin_flag=(-i)
+    [ -t 0 ] && _stdin_flag=(-it)
+    local _cmd=("$_shai_container" run --rm "${_stdin_flag[@]}"
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
+        -e TERM
+        -e COLORTERM
         -e SHAI_HOST_OS
         -e SHAI_HOST_ARCH
         -e SHAI_HOST_SHELL
@@ -236,24 +270,12 @@ _shai() {
         "$SHAI_IMAGE"
     )
 
-    # Check if --raw or -r was passed — only scan leading flags, stop at first non-flag word
-    # Also skip glow for /context, /stats and any /subcommand (they output rich ANSI panels)
-    local _raw=0
-    for _arg in "$@"; do
-        case "$_arg" in
-            --raw|-r) _raw=1 ;;
-            /*)       _raw=1 ; break ;;  # /config, /context, /stats output rich panels, not markdown
-            -*) ;;          # other flag, keep scanning
-            *) break ;;     # first non-flag word: stop
-        esac
-    done
-
-    if [ "$_raw" -eq 0 ] && command -v glow > /dev/null 2>&1; then
-        "${_cmd[@]}" "$@" | glow -
-    else
-        "${_cmd[@]}" "$@"
-    fi
+    "${_cmd[@]}" "$@"
 }
 
 # noglob prevents zsh from expanding ?, *, ! etc. before passing args to shai
-alias shai='noglob _shai'
+if [ -n "$ZSH_VERSION" ]; then
+    alias shai='noglob _shai'
+else
+    alias shai='_shai'
+fi

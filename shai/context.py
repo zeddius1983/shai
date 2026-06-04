@@ -9,6 +9,7 @@ Priority order:
 """
 
 import os
+import re
 import select
 import stat as stat_module
 import subprocess
@@ -21,23 +22,28 @@ from .config import CONTEXT_FILE
 
 def get_context(lines: int = 100) -> Optional[str]:
     """Return the best available terminal context string, or None."""
+    ctx = None
     # 1. Piped stdin — only consume if data is actually available
     if not sys.stdin.isatty() and _stdin_has_data():
-        return sys.stdin.read().strip() or None
+        ctx = sys.stdin.read().strip() or None
 
     # 2. tmux capture — always reflects the current live pane output
-    tmux_ctx = _tmux_capture(lines)
-    if tmux_ctx:
-        return tmux_ctx
+    if not ctx:
+        ctx = _tmux_capture(lines)
 
     # 3. Saved context file from shell hook (used when not in tmux)
-    if CONTEXT_FILE.exists():
+    if not ctx and CONTEXT_FILE.exists():
         text = CONTEXT_FILE.read_text().strip()
         if text:
-            return _last_n_lines(text, lines)
+            ctx = _last_n_lines(text, lines)
 
     # 4. Shell history fallback
-    return _history_fallback(10)
+    if not ctx:
+        ctx = _history_fallback(10)
+
+    if ctx:
+        return _clean_text(ctx) or None
+    return None
 
 
 def _stdin_has_data() -> bool:
@@ -104,3 +110,21 @@ def _history_fallback(n: int) -> Optional[str]:
         return "\n".join(lines[-n:]) or None
     except OSError:
         return None
+
+
+def _strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from text (colors, style, cursor movements, etc.)."""
+    # Matches standard ESC [ ... m styles and other control sequences
+    ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]')
+    return ansi_escape.sub('', text)
+
+
+def _clean_text(text: str) -> str:
+    """De-noise context text by stripping ANSI codes and collapsing repeated empty lines."""
+    text = _strip_ansi(text)
+    # Collapse 3 or more consecutive newlines into 2 (one empty line)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    # Clean trailing whitespaces from lines
+    lines = [line.rstrip() for line in text.splitlines()]
+    return "\n".join(lines).strip()
+

@@ -10,6 +10,7 @@ import click
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
+from rich.padding import Padding
 from rich.text import Text
 
 from rich.panel import Panel
@@ -124,33 +125,35 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
         except KeyboardInterrupt:
             pass
         print()
-    elif shutil.which("glow"):
-        # Buffer with a spinner, then render with glow
-        try:
-            with Live(
-                Text("  thinking…", style="dim"),
-                console=console,
-                refresh_per_second=12,
-                transient=True,
-            ) as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    word_count = len(buffer.split())
-                    live.update(Text(f"  thinking… ({word_count} words)", style="dim"))
-        except KeyboardInterrupt:
-            pass
-        if buffer:
-            rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
-            subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
     else:
-        # Fallback: live rich markdown rendering
-        try:
-            with Live(Markdown(""), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    live.update(Markdown(buffer))
-        except KeyboardInterrupt:
-            pass
+        console.print()
+        if shutil.which("glow"):
+            # Buffer with a spinner, then render with glow
+            try:
+                with Live(
+                    Text("    thinking…", style="dim"),
+                    console=console,
+                    refresh_per_second=12,
+                    transient=True,
+                ) as live:
+                    for chunk in provider.stream(system, prompt):
+                        buffer += chunk
+                        word_count = len(buffer.split())
+                        live.update(Text(f"    thinking… ({word_count} words)", style="dim"))
+            except KeyboardInterrupt:
+                pass
+            if buffer:
+                rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
+                subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
+        else:
+            # Fallback: live rich markdown rendering
+            try:
+                with Live(Padding(Text("    thinking…", style="dim"), (0, 0, 0, 4)), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
+                    for chunk in provider.stream(system, prompt):
+                        buffer += chunk
+                        live.update(Padding(Markdown(buffer), (0, 0, 0, 4)))
+            except KeyboardInterrupt:
+                pass
 
 
 @click.command(
@@ -225,31 +228,41 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             system = DO_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
             provider = get_provider(cfg.get_active_provider())
             buffer = ""
+            console.print()
             with Live(
-                Text("  thinking…", style="dim"),
+                Text("    thinking…", style="dim"),
                 console=console,
                 refresh_per_second=12,
                 transient=True,
             ) as live:
                 for chunk in provider.stream(system, task):
                     buffer += chunk
-                    live.update(Text(f"  thinking… ({len(buffer.split())} words)", style="dim"))
+                    live.update(Text(f"    thinking… ({len(buffer.split())} words)", style="dim"))
 
             # Extract bash command and explanation from response
             cleaned = textwrap.dedent(_unwrap_markdown_fence(buffer))
             match = re.search(r'```bash\n(.*?)```', cleaned, re.DOTALL)
             if not match:
-                console.print(cleaned)
+                console.print(Padding(cleaned, (0, 0, 0, 4)))
                 return
             command = match.group(1).strip()
             explanation = cleaned[:match.start()].strip()
 
             if explanation:
-                console.print(explanation)
-            console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                console.print(Padding(explanation, (0, 0, 0, 4)))
+            console.print(Padding(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"), (0, 0, 0, 4)))
+
+            # If running inside a container, do not execute the command here.
+            # The host wrapper script will intercept and run it on the host instead.
+            is_container = _os.path.exists("/.dockerenv") or _os.path.exists("/run/.containerenv")
+            if is_container:
+                import base64
+                encoded_cmd = base64.b64encode(command.encode('utf-8')).decode('utf-8')
+                print(f"__SHAI_CMD_B64__:{encoded_cmd}")
+                return
 
             while True:
-                choice = click.prompt("Run this command? [Y/n/e]", default="y").strip().lower()
+                choice = click.prompt("    Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
                     subprocess.run(["bash", "-c", command])
                     break
@@ -257,9 +270,9 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
                     break
                 elif choice == "e":
                     command = _edit_inline(command)
-                    console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                    console.print(Padding(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"), (0, 0, 0, 4)))
                 else:
-                    console.print("[dim]Enter y, n, or e[/dim]")
+                    console.print("    [dim]Enter y, n, or e[/dim]")
         except Exception as e:
             err_console.print(f"[red]Error:[/red] {e}")
             sys.exit(1)
