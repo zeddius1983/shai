@@ -157,10 +157,32 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                     buffer += first_chunk
 
             if buffer:
-                with Live(Markdown(buffer), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
-                    for chunk in stream:
-                        buffer += chunk
-                        live.update(Markdown(buffer))
+                # Limit maximum width to 90 characters and pad left/right by 4 spaces
+                render_width = min(90, _term_width - 8) if _term_width > 20 else _term_width
+
+                def _get_renderable(text):
+                    t = Table.grid(padding=(0, 4))
+                    t.add_column(width=render_width)
+                    t.add_row(Markdown(text))
+                    return t
+
+                try:
+                    with Live(
+                        _get_renderable(buffer),
+                        console=console,
+                        refresh_per_second=12,
+                        transient=True,
+                        vertical_overflow="crop",
+                    ) as live:
+                        for chunk in stream:
+                            buffer += chunk
+                            live.update(_get_renderable(buffer))
+                except KeyboardInterrupt:
+                    pass
+
+                # Final print to console to support standard scrollback without duplication
+                if buffer:
+                    console.print(_get_renderable(buffer))
         except KeyboardInterrupt:
             pass
 
