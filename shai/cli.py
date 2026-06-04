@@ -24,8 +24,8 @@ from .providers import get_provider
 
 import os as _os
 _term_width = _os.get_terminal_size().columns if _os.isatty(1) else 120
-console = Console(width=_term_width)
-err_console = Console(stderr=True, width=_term_width)
+console = Console()
+err_console = Console(stderr=True)
 
 
 def _find_bash4() -> str:
@@ -124,8 +124,8 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
         except KeyboardInterrupt:
             pass
         print()
-    elif shutil.which("glow"):
-        # Buffer with a spinner, then render with glow
+    else:
+        # Buffered rich markdown rendering with dynamic spinner
         try:
             with Live(
                 Text("  thinking…", style="dim"),
@@ -139,18 +139,19 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                     live.update(Text(f"  thinking… ({word_count} words)", style="dim"))
         except KeyboardInterrupt:
             pass
+
         if buffer:
-            rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
-            subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
-    else:
-        # Fallback: live rich markdown rendering
-        try:
-            with Live(Markdown(""), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    live.update(Markdown(buffer))
-        except KeyboardInterrupt:
-            pass
+            # Limit maximum width to 90 characters and pad left/right by 4 spaces
+            term_width = console.width if console.width is not None else 80
+            render_width = min(90, term_width - 8) if term_width > 20 else term_width
+
+            def _get_renderable(text):
+                t = Table.grid(padding=(0, 4))
+                t.add_column(width=render_width)
+                t.add_row(Markdown(text))
+                return t
+
+            console.print(_get_renderable(buffer))
 
 
 @click.command(

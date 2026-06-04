@@ -248,9 +248,12 @@ _shai() {
         fi
     fi
 
+    local _tty_flags=()
+    [ -t 0 ] && _tty_flags+=(-i)
+    [ -t 1 ] && _tty_flags+=(-t)
+
     # Build docker command as an array to avoid any glob re-expansion
-    local _cmd=("$_container_bin" run --rm)
-    [ -t 0 ] || _cmd+=(-i)
+    local _cmd=("$_container_bin" run --rm "${_tty_flags[@]}")
     _cmd+=(
         -e OPENAI_API_KEY
         -e ANTHROPIC_API_KEY
@@ -266,23 +269,7 @@ _shai() {
         "$SHAI_IMAGE"
     )
 
-    # Check if --raw or -r was passed — only scan leading flags, stop at first non-flag word
-    # Also skip glow for /context, /stats and any /subcommand (they output rich ANSI panels)
-    local _raw=0
-    for _arg in "$@"; do
-        case "$_arg" in
-            --raw|-r) _raw=1 ;;
-            /*)       _raw=1 ; break ;;  # /config, /context, /stats output rich panels, not markdown
-            -*) ;;          # other flag, keep scanning
-            *) break ;;     # first non-flag word: stop
-        esac
-    done
-
-    if [ "$_raw" -eq 0 ] && command -v glow > /dev/null 2>&1; then
-        "${_cmd[@]}" "$@" | glow -
-    else
-        "${_cmd[@]}" "$@"
-    fi
+    "${_cmd[@]}" "$@"
 }
 
 # noglob prevents zsh from expanding ?, *, ! etc. before passing args to shai
