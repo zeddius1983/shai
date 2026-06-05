@@ -67,13 +67,13 @@ source "$(shai --shell-path bash)"
 ### Method 3: Docker (No Python required)
 
 ```bash
-docker pull ghcr.io/zeddius1983/shell-assistant:latest
+docker pull ghcr.io/zeddius1983/shai:latest
 ```
 
 Add to `~/.zshrc` or `~/.bashrc`:
 
 ```bash
-export SHAI_IMAGE="ghcr.io/zeddius1983/shell-assistant:latest"
+export SHAI_IMAGE="ghcr.io/zeddius1983/shai:latest"
 source /path/to/shell-assistant/shell/shai-docker.sh
 ```
 
@@ -260,5 +260,5 @@ Push to `main` or create a version tag — the included GitHub Actions workflow 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
-# → ghcr.io/zeddius1983/shell-assistant:0.1.0 and :latest
+# → ghcr.io/zeddius1983/shai:0.1.0 and :latest
 ```

@@ -4,8 +4,8 @@
 # Usage: add to ~/.zshrc:
 #   source /path/to/shai-docker.zsh
 #
-# Optional: set image name (default: ghcr.io/youruser/shai:latest)
-#   export SHAI_IMAGE="ghcr.io/youruser/shai:latest"
+# Optional: set image name (default: ghcr.io/zeddius1983/shai:latest)
+#   export SHAI_IMAGE="ghcr.io/zeddius1983/shai:latest"
 
 # Only load in zsh
 [ -n "$ZSH_VERSION" ] || return 0
@@ -18,7 +18,7 @@ else
 fi
 _shai_context_file="$_shai_cache_dir/context"
 _shai_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/shai"
-SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/youruser/shai:latest}"
+SHAI_IMAGE="${SHAI_IMAGE:-ghcr.io/zeddius1983/shai:latest}"
 
 # Hook: save terminal context after every command
 _shai_save_context() {

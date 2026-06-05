@@ -161,27 +161,190 @@ uninstall_shai_implicit() {
   ok "shai implicit mode uninstalled"
 }
 
+install_shai_docker() {
+  local tag="$1"
+  step "Installing shai via Docker (tag: $tag)..."
+
+  # Verify docker/podman is available
+  local container_bin=""
+  if command -v docker >/dev/null 2>&1; then
+    container_bin="docker"
+  elif command -v podman >/dev/null 2>&1; then
+    container_bin="podman"
+  else
+    die "Neither docker nor podman was found. Please install one of them before setting up the Docker version."
+  fi
+
+  # Determine default registry/image based on REPO_URL
+  local registry="ghcr.io"
+  local owner="zeddius1983"
+  local repo="shai"
+  if [ -n "${REPO_URL:-}" ]; then
+    if [[ "$REPO_URL" =~ ^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/(.+)$ ]]; then
+      owner="${BASH_REMATCH[1]}"
+      repo="${BASH_REMATCH[2]}"
+    fi
+  fi
+
+  local image="${registry}/${owner}/${repo}:${tag}"
+  info "Pulling Docker image: $image..."
+  if ! "$container_bin" pull "$image"; then
+    warn "Failed to pull image $image. It might not exist yet or you may need to docker login. Sourcing setup will pull it dynamically on first run."
+  fi
+
+  local docker_script="$HOME/.config/shai/shai-docker.sh"
+  mkdir -p "$HOME/.config/shai"
+
+  # Retrieve shai-docker.sh
+  if [ -n "${REPO_URL:-}" ]; then
+    info "Downloading shai-docker.sh from $REPO_URL/shell/shai-docker.sh..."
+    if ! curl -sSLo "$docker_script" "$REPO_URL/shell/shai-docker.sh"; then
+      die "Failed to download shai-docker.sh from $REPO_URL"
+    fi
+  else
+    # Running locally or fallback
+    local local_script="$(dirname "$0")/shai-docker.sh"
+    if [ -f "$local_script" ]; then
+      cp "$local_script" "$docker_script"
+    else
+      info "Downloading default shai-docker.sh..."
+      if ! curl -sSLo "$docker_script" "https://raw.githubusercontent.com/zeddius1983/shai/main/shell/shai-docker.sh"; then
+        die "Failed to download shai-docker.sh"
+      fi
+    fi
+  fi
+  chmod +x "$docker_script"
+
+  # Patch .zshrc
+  _zshrc_add "shai-docker" \
+    "export SHAI_IMAGE=\"$image\"" \
+    "source \"$docker_script\""
+
+  ok "shai Docker version installed"
+}
+
+uninstall_shai_docker() {
+  step "Uninstalling shai Docker version..."
+
+  # Remove image if found in ZSHRC
+  if [ -f "$ZSHRC" ]; then
+    local image_to_remove
+    image_to_remove=$(grep -oE "export SHAI_IMAGE=\"[^\"]+\"" "$ZSHRC" | cut -d'"' -f2 || true)
+    if [ -n "$image_to_remove" ]; then
+      local container_bin=""
+      if command -v docker >/dev/null 2>&1; then
+        container_bin="docker"
+      elif command -v podman >/dev/null 2>&1; then
+        container_bin="podman"
+      fi
+      if [ -n "$container_bin" ]; then
+        step "Removing Docker image: $image_to_remove..."
+        "$container_bin" rmi "$image_to_remove" || true
+      fi
+    fi
+  fi
+
+  _zshrc_remove "shai-docker"
+  rm -f "$HOME/.config/shai/shai-docker.sh" 2>/dev/null || true
+  ok "shai Docker version uninstalled"
+}
+
+uninstall_all() {
+  uninstall_shai_implicit
+  uninstall_shai
+  uninstall_shai_docker
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 main() {
-  local uninstall=0
-  for arg in "$@"; do
-    case "$arg" in
-      --uninstall) uninstall=1 ;;
+  local mode=""
+  local tag="latest"
+  local choice=""
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --uninstall) mode="uninstall" ;;
+      --local) mode="local" ;;
+      --docker) mode="docker" ;;
+      --tag)
+        shift
+        tag="$1"
+        ;;
     esac
+    shift
   done
 
   # Touch ~/.zshrc if not present
   touch "$ZSHRC"
 
-  if [ "$uninstall" -eq 1 ]; then
-    uninstall_shai_implicit
-    uninstall_shai
-  else
+  # If no mode is specified, run interactively
+  if [ -z "$mode" ]; then
+    # Detect if any version is installed
+    local installed=0
+    if _zshrc_has "shai" || _zshrc_has "shai-implicit" || _zshrc_has "shai-docker" || command -v shai >/dev/null 2>&1; then
+      installed=1
+    fi
+
+    echo "============================================="
+    echo "       Shai Toolbox Installer Menu"
+    echo "============================================="
+    echo "Please select an option:"
+    echo "  1) Install Shai locally (Requires uv/Python)"
+    echo "  2) Install Shai via Docker/Podman"
+    if [ "$installed" -eq 1 ]; then
+      echo "  3) Uninstall Shai (Removes local & Docker versions)"
+    else
+      echo "  3) Uninstall Shai (Cleanup any leftovers)"
+    fi
+    echo "  4) Exit"
+    echo "============================================="
+
+    while true; do
+      printf "Enter selection [1-4]: "
+      if [ -t 0 ]; then
+        read -r choice
+      elif [ -c /dev/tty ]; then
+        read -r choice < /dev/tty
+      else
+        die "Installer running in non-interactive environment without terminal. Please specify installation mode via arguments (--local, --docker, --uninstall)."
+      fi
+
+      case "$choice" in
+        1) mode="local"; break ;;
+        2) mode="docker"; break ;;
+        3) mode="uninstall"; break ;;
+        4) echo "Exiting."; exit 0 ;;
+        *) echo "Invalid option. Please enter 1, 2, 3, or 4." ;;
+      esac
+    done
+  fi
+
+  if [ "$mode" = "uninstall" ]; then
+    uninstall_all
+  elif [ "$mode" = "local" ]; then
     install_shai
     install_shai_implicit
+  elif [ "$mode" = "docker" ]; then
+    # Prompt for docker tag if interactive, or use provided/default
+    if [ "$tag" = "latest" ]; then
+      # Only prompt if we run interactively (indicated by no arguments originally passed)
+      if [ -n "${choice:-}" ]; then
+        printf "Enter Docker image tag [default: latest]: "
+        local user_tag=""
+        if [ -t 0 ]; then
+          read -r user_tag
+        elif [ -c /dev/tty ]; then
+          read -r user_tag < /dev/tty
+        fi
+        if [ -n "$user_tag" ]; then
+          tag="$user_tag"
+        fi
+      fi
+    fi
+    install_shai_docker "$tag"
   fi
 
   printf '\n%s\n\n' "$(green "$(bold '✓ All done!')")"
