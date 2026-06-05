@@ -255,6 +255,133 @@ uninstall_all() {
   uninstall_shai_docker
 }
 
+_show_interactive_menu() {
+  local installed="$1"
+  local title="Shai Installer Menu"
+  local uninstall_text="Uninstall Shai (Cleanup any leftovers)"
+  if [ "$installed" -eq 1 ]; then
+    uninstall_text="Uninstall Shai (Removes local & Docker versions)"
+  fi
+
+  local items=(
+    "Install Shai locally (Requires uv/Python)"
+    "Install Shai via Docker/Podman"
+    "$uninstall_text"
+    "Exit"
+  )
+  local num_items=${#items[@]}
+  local cursor=0
+  
+  local TTY=""
+  if true 2>/dev/null >/dev/tty && true 2>/dev/null </dev/tty; then
+    TTY="/dev/tty"
+  elif [ -t 0 ]; then
+    TTY="stdin"
+  else
+    die "Installer running in non-interactive environment without terminal. Please specify installation mode via arguments (--local, --docker, --uninstall)."
+  fi
+
+  tui_print() {
+    if [ "$TTY" = "/dev/tty" ]; then
+      printf '%s' "$*" > /dev/tty
+    else
+      printf '%s' "$*"
+    fi
+  }
+
+  tui_print_nl() {
+    if [ "$TTY" = "/dev/tty" ]; then
+      printf '%s\n' "$*" > /dev/tty
+    else
+      printf '%s\n' "$*"
+    fi
+  }
+
+  # Hide cursor
+  tui_print "\033[?25l"
+  
+  cleanup() {
+    tui_print "\033[?25h"
+  }
+  trap cleanup EXIT
+
+  # Initial print
+  tui_print_nl ""
+  tui_print_nl "  $(bold "$(cyan "$title")")"
+  tui_print_nl "  $(dim "-------------------")"
+  local i
+  for ((i=0; i<num_items; i++)); do
+    tui_print_nl ""
+  done
+  tui_print_nl "  $(dim "Use ↑/↓ or j/k to navigate, ENTER to select")"
+
+  while true; do
+    # Move cursor up to redraw items and help line
+    tui_print "\033[$((num_items + 1))A"
+
+    # Redraw items
+    for ((i=0; i<num_items; i++)); do
+      if [ "$i" -eq "$cursor" ]; then
+        tui_print "\033[2K\r  $(cyan "$(bold "❯")")  $(cyan "$(bold "${items[$i]}")")\n"
+      else
+        tui_print "\033[2K\r     ${items[$i]}\n"
+      fi
+    done
+    tui_print "\033[2K\r  $(dim "Use ↑/↓ or j/k to navigate, ENTER to select")\n"
+
+    # Read keypress
+    local char="" char2="" char3=""
+    if [ "$TTY" = "/dev/tty" ]; then
+      IFS= read -r -s -n1 char < /dev/tty
+    else
+      IFS= read -r -s -n1 char
+    fi
+
+    if [ "$char" = $'\033' ]; then
+      if [ "$TTY" = "/dev/tty" ]; then
+        IFS= read -r -s -n1 -t 0.1 char2 < /dev/tty || true
+      else
+        IFS= read -r -s -n1 -t 0.1 char2 || true
+      fi
+      if [ "$char2" = '[' ]; then
+        if [ "$TTY" = "/dev/tty" ]; then
+          IFS= read -r -s -n1 -t 0.1 char3 < /dev/tty || true
+        else
+          IFS= read -r -s -n1 -t 0.1 char3 || true
+        fi
+        case "$char3" in
+          A) [ $cursor -gt 0 ] && cursor=$((cursor - 1)) ;;
+          B) [ $cursor -lt $((num_items - 1)) ] && cursor=$((cursor + 1)) ;;
+        esac
+      fi
+    elif [ "$char" = 'k' ]; then
+      [ $cursor -gt 0 ] && cursor=$((cursor - 1))
+    elif [ "$char" = 'j' ]; then
+      [ $cursor -lt $((num_items - 1)) ] && cursor=$((cursor + 1))
+    elif [ "$char" = $'\r' ] || [ "$char" = $'\n' ] || [ "$char" = '' ]; then
+      break
+    fi
+  done
+
+  # Show cursor
+  tui_print "\033[?25h"
+  trap - EXIT
+
+  # Clear TUI lines from terminal
+  tui_print "\033[2K\r"
+  tui_print "\033[${num_items}A"
+  for ((i=0; i<num_items; i++)); do
+    tui_print "\033[2K\r\n"
+  done
+  tui_print "\033[$((num_items + 3))A"
+  tui_print "\033[2K\r\n"
+  tui_print "\033[2K\r\n"
+  tui_print "\033[2K\r\n"
+  tui_print "\033[3A"
+
+  return $((cursor + 1))
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -288,38 +415,16 @@ main() {
       installed=1
     fi
 
-    echo "============================================="
-    echo "       Shai Toolbox Installer Menu"
-    echo "============================================="
-    echo "Please select an option:"
-    echo "  1) Install Shai locally (Requires uv/Python)"
-    echo "  2) Install Shai via Docker/Podman"
-    if [ "$installed" -eq 1 ]; then
-      echo "  3) Uninstall Shai (Removes local & Docker versions)"
-    else
-      echo "  3) Uninstall Shai (Cleanup any leftovers)"
-    fi
-    echo "  4) Exit"
-    echo "============================================="
+    _show_interactive_menu "$installed"
+    choice=$?
 
-    while true; do
-      printf "Enter selection [1-4]: "
-      if [ -t 0 ]; then
-        read -r choice
-      elif [ -c /dev/tty ]; then
-        read -r choice < /dev/tty
-      else
-        die "Installer running in non-interactive environment without terminal. Please specify installation mode via arguments (--local, --docker, --uninstall)."
-      fi
-
-      case "$choice" in
-        1) mode="local"; break ;;
-        2) mode="docker"; break ;;
-        3) mode="uninstall"; break ;;
-        4) echo "Exiting."; exit 0 ;;
-        *) echo "Invalid option. Please enter 1, 2, 3, or 4." ;;
-      esac
-    done
+    case "$choice" in
+      1) mode="local" ;;
+      2) mode="docker" ;;
+      3) mode="uninstall" ;;
+      4) echo "Exiting."; exit 0 ;;
+      *) echo "Exiting."; exit 0 ;;
+    esac
   fi
 
   if [ "$mode" = "uninstall" ]; then
