@@ -283,17 +283,17 @@ _show_interactive_menu() {
 
   tui_print() {
     if [ "$TTY" = "/dev/tty" ]; then
-      printf '%s' "$*" > /dev/tty
+      printf '%b' "$*" > /dev/tty
     else
-      printf '%s' "$*"
+      printf '%b' "$*"
     fi
   }
 
   tui_print_nl() {
     if [ "$TTY" = "/dev/tty" ]; then
-      printf '%s\n' "$*" > /dev/tty
+      printf '%b\n' "$*" > /dev/tty
     else
-      printf '%s\n' "$*"
+      printf '%b\n' "$*"
     fi
   }
 
