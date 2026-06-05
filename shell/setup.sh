@@ -133,8 +133,14 @@ install_shai() {
 
 uninstall_shai() {
   step "Uninstalling shai..."
-  uv tool uninstall shai 2>/dev/null || true
-  _zshrc_remove "shai"
+  if command -v uv >/dev/null 2>&1 && uv tool list 2>/dev/null | grep -q "^shai "; then
+    uv tool uninstall shai 2>/dev/null || true
+    info "Deleted local Python tool: shai (via uv)"
+  fi
+  if _zshrc_has "shai"; then
+    _zshrc_remove "shai"
+    info "Removed local shell integration block from $ZSHRC"
+  fi
   ok "shai uninstalled"
 }
 
@@ -157,7 +163,10 @@ install_shai_implicit() {
 
 uninstall_shai_implicit() {
   step "Uninstalling shai implicit mode..."
-  _zshrc_remove "shai-implicit"
+  if _zshrc_has "shai-implicit"; then
+    _zshrc_remove "shai-implicit"
+    info "Removed implicit keybinding block from $ZSHRC"
+  fi
   ok "shai implicit mode uninstalled"
 }
 
@@ -238,14 +247,26 @@ uninstall_shai_docker() {
         container_bin="podman"
       fi
       if [ -n "$container_bin" ]; then
-        step "Removing Docker image: $image_to_remove..."
-        "$container_bin" rmi "$image_to_remove" || true
+        info "Removing Docker image: $image_to_remove..."
+        if "$container_bin" rmi "$image_to_remove" 2>/dev/null; then
+          info "Deleted Docker image: $image_to_remove"
+        else
+          info "Docker image $image_to_remove not found or already deleted from daemon"
+        fi
       fi
     fi
   fi
 
-  _zshrc_remove "shai-docker"
-  rm -f "$HOME/.config/shai/shai-docker.sh" 2>/dev/null || true
+  if _zshrc_has "shai-docker"; then
+    _zshrc_remove "shai-docker"
+    info "Removed Docker shell integration block from $ZSHRC"
+  fi
+
+  local docker_script="$HOME/.config/shai/shai-docker.sh"
+  if [ -f "$docker_script" ]; then
+    rm -f "$docker_script" 2>/dev/null || true
+    info "Deleted Docker integration script: $docker_script"
+  fi
   ok "shai Docker version uninstalled"
 }
 
