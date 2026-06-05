@@ -400,7 +400,8 @@ _show_interactive_menu() {
   tui_print "\033[2K\r\n"
   tui_print "\033[3A"
 
-  return $((cursor + 1))
+  MENU_CHOICE=$((cursor + 1))
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -437,7 +438,7 @@ main() {
     fi
 
     _show_interactive_menu "$installed"
-    choice=$?
+    choice="$MENU_CHOICE"
 
     case "$choice" in
       1) mode="local" ;;
