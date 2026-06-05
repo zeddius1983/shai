@@ -39,6 +39,11 @@ Instead of installing things manually, run the installer directly from GitHub:
 
 This installs `shai` and configures `shai implicit mode` by default.
 
+To install from a specific branch or fork, use this one-liner:
+```bash
+REPO_URL="https://raw.githubusercontent.com/zeddius1983/shell-assistant/feature/1.0"; REPO_URL=$REPO_URL /bin/bash -c "$(curl -fsSL $REPO_URL/install.sh)"
+```
+
 > **Note:** Whenever `~/.zshrc` is modified by the installer, a backup is automatically created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
 
 ### Method 2: pipx (Standalone)

@@ -14,7 +14,7 @@ if [ -f "$(dirname "$0")/shell/setup.sh" ]; then
     exec "$(dirname "$0")/shell/setup.sh" "$@"
 fi
 
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shell-assistant/main"
+REPO_URL="${REPO_URL:-https://raw.githubusercontent.com/zeddius1983/shell-assistant/main}"
 TMP_DIR="$(mktemp -d)"
 
 # Cleanup on exit
@@ -26,4 +26,4 @@ mkdir -p "$TMP_DIR/shell"
 curl -sSLo "$TMP_DIR/shell/setup.sh" "$REPO_URL/shell/setup.sh"
 chmod +x "$TMP_DIR/shell/setup.sh"
 
-"$TMP_DIR/shell/setup.sh" "$@"
+REPO_URL="$REPO_URL" "$TMP_DIR/shell/setup.sh" "$@"

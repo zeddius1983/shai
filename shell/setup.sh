@@ -105,7 +105,19 @@ install_shai() {
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
   fi
-  uv tool install "git+https://github.com/zeddius1983/shell-assistant.git" --force --refresh
+
+  local git_url="git+https://github.com/zeddius1983/shell-assistant.git"
+  if [ -n "${REPO_URL:-}" ]; then
+    if [[ "$REPO_URL" =~ ^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/(.+)$ ]]; then
+      local owner="${BASH_REMATCH[1]}"
+      local repo="${BASH_REMATCH[2]}"
+      local ref="${BASH_REMATCH[3]}"
+      git_url="git+https://github.com/${owner}/${repo}.git@${ref}"
+      info "Installing from custom git target: $git_url"
+    fi
+  fi
+
+  uv tool install "$git_url" --force --refresh
   export PATH="$(uv tool dir 2>/dev/null | sed 's|/tools$|/bin|'):$HOME/.local/bin:$PATH"
   # Evaluate the shell script path at install time and trim whitespace
   # (some environments produce a leading newline from click.echo)
