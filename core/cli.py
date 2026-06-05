@@ -335,7 +335,7 @@ def _cmd_context(provider_override, model_override):
     system = cfg.system_prompt + "\n\n" + format_for_prompt()
     context = get_context(cfg.context_lines)
 
-    console.print(Panel(system, title="[bold cyan]System Prompt[/bold cyan]", border_style="cyan"))
+    console.print(Panel(Markdown(system), title="[bold cyan]System Prompt[/bold cyan]", border_style="cyan"))
     console.print()
     if context:
         console.print(Panel(
