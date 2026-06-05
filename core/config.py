@@ -18,15 +18,18 @@ CONTEXT_FILE = _cache_dir() / "context"
 # When running inside a container on macOS/Windows, use the appropriate internal hostname to reach host services.
 # On Linux Docker the gateway is typically 172.17.0.1.
 # SHAI_OLLAMA_HOST env var allows explicit override.
-def _local_base_url(port: int) -> str:
-    """Return base URL for a local server, using host.docker.internal/host.containers.internal when inside a container."""
+def _container_host() -> str:
+    """Return the hostname to use for reaching services on the host machine."""
     if os.path.exists("/.dockerenv"):
-        host = "host.docker.internal"
-    elif os.path.exists("/run/.containerenv"):
-        host = "host.containers.internal"
-    else:
-        host = "localhost"
-    return f"http://{host}:{port}/v1"
+        return "host.docker.internal"
+    if os.path.exists("/run/.containerenv"):
+        return "host.containers.internal"
+    return "localhost"
+
+
+def _local_base_url(port: int) -> str:
+    """Return base URL for a local server, using container-aware hostname when inside a container."""
+    return f"http://{_container_host()}:{port}/v1"
 
 
 DEFAULT_CONFIG = {
@@ -126,11 +129,9 @@ class Config:
         raw = self.providers[self.provider]
         base_url = raw.get("base_url")
         # Inside Docker/Podman, localhost on the config refers to the host machine
-        if base_url:
-            if os.path.exists("/.dockerenv"):
-                base_url = base_url.replace("://localhost:", "://host.docker.internal:")
-            elif os.path.exists("/run/.containerenv"):
-                base_url = base_url.replace("://localhost:", "://host.containers.internal:")
+        host = _container_host()
+        if base_url and host != "localhost":
+            base_url = base_url.replace("://localhost:", f"://{host}:")
         return ProviderConfig(
             type=raw.get("type", "openai"),
             model=raw["model"],

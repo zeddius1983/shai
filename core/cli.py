@@ -26,9 +26,13 @@ console = Console()
 err_console = Console(stderr=True)
 
 
+def _run_shell_command(command: str) -> None:
+    """Execute a shell command using the user's preferred shell."""
+    shell = os.environ.get("SHELL") or shutil.which("bash") or shutil.which("sh") or "sh"
+    subprocess.run([shell, "-c", command])
+
 def _find_bash4() -> str:
     """Return path to bash 4+ (supports read -e -i), or empty string."""
-    import re
     candidates = ["/opt/homebrew/bin/bash", "/usr/local/bin/bash", "bash"]
     for candidate in candidates:
         path = shutil.which(candidate)
@@ -86,7 +90,7 @@ def _edit_inline(command: str) -> str:
                 return edited.strip() if edited else command
 
         if tmpfile:
-            result = open(tmpfile).read().strip()
+            result = Path(tmpfile).read_text().strip()
             return result if result else command
         return command
     finally:
@@ -223,7 +227,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             sys.exit(1)
         try:
             system = DO_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
-            provider = get_provider(cfg.get_active_provider())
+            llm = get_provider(cfg.get_active_provider())
             buffer = ""
             console.print()
             with Live(
@@ -232,7 +236,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
                 refresh_per_second=12,
                 transient=True,
             ) as live:
-                for chunk in provider.stream(system, task):
+                for chunk in llm.stream(system, task):
                     buffer += chunk
                     live.update(Text(f"  thinking… ({len(buffer.split())} words)", style="dim"))
 
@@ -253,7 +257,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
                 choice = click.prompt("    Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
                     console.print()
-                    subprocess.run(["bash", "-c", command])
+                    _run_shell_command(command)
                     break
                 elif choice == "n":
                     break
