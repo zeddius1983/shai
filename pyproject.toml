@@ -34,7 +34,7 @@ Repository = "https://github.com/zeddius1983/shell-assistant"
 Issues = "https://github.com/zeddius1983/shell-assistant/issues"
 
 [project.scripts]
-shai = "shai.cli:main"
+shai = "core.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["shai"]
+packages = ["core"]

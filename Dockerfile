@@ -9,7 +9,7 @@ RUN pip install --no-cache-dir hatchling && \
 
 # Copy source
 COPY README.md .
-COPY shai/ shai/
+COPY core/ core/
 
 # Install shai
 RUN pip install --no-cache-dir --no-deps .
