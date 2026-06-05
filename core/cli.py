@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 import subprocess
@@ -21,9 +22,6 @@ from .config import CONTEXT_FILE
 from .system_info import format_for_prompt, get_system_info
 from .context import get_context
 from .providers import get_provider
-
-import os as _os
-_term_width = _os.get_terminal_size().columns if _os.isatty(1) else 120
 console = Console()
 err_console = Console(stderr=True)
 
@@ -48,7 +46,7 @@ def _find_bash4() -> str:
 
 def _edit_inline(command: str) -> str:
     """Open command for inline editing with readline pre-fill."""
-    import platform, shlex, tempfile, os as _os
+    import platform, shlex, tempfile
 
     # bash read -e -i pre-fills the readline buffer reliably.
     # Linux always has bash 4+; macOS ships bash 3.2 (no -i support) so we
@@ -71,7 +69,7 @@ def _edit_inline(command: str) -> str:
             script = f'_v={shlex.quote(command)}; vared -p "$ " _v; printf "%s" "$_v" > {shlex.quote(tmpfile)}'
             subprocess.run(["/bin/zsh", "--no-rcs", "-i", "-c", script])
         else:
-            _os.unlink(tmpfile)
+            os.unlink(tmpfile)
             tmpfile = None
             try:
                 import readline
@@ -92,8 +90,8 @@ def _edit_inline(command: str) -> str:
             return result if result else command
         return command
     finally:
-        if tmpfile and _os.path.exists(tmpfile):
-            _os.unlink(tmpfile)
+        if tmpfile and os.path.exists(tmpfile):
+            os.unlink(tmpfile)
 
 
 def _unwrap_markdown_fence(text: str) -> str:
@@ -307,8 +305,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
 def _cmd_config():
     # When running inside Docker the container path (/root/.config/…) is not useful
     # to the user — show the host path passed via SHAI_HOST_CONFIG_DIR instead.
-    import os as _os
-    host_config_dir = _os.environ.get("SHAI_HOST_CONFIG_DIR")
+    host_config_dir = os.environ.get("SHAI_HOST_CONFIG_DIR")
     display_path = Path(host_config_dir) / "config.yaml" if host_config_dir else CONFIG_PATH
 
     if CONFIG_PATH.exists():
@@ -373,9 +370,8 @@ def _cmd_stats(provider_override, model_override):
     system_prompt = cfg.system_prompt + "\n\n" + format_for_prompt()
     system_tokens = len(system_prompt.split()) * 4 // 3
 
-    import os as _os
-    host_config_dir = _os.environ.get("SHAI_HOST_CONFIG_DIR")
-    host_cache_dir  = _os.environ.get("SHAI_HOST_CACHE_DIR")
+    host_config_dir = os.environ.get("SHAI_HOST_CONFIG_DIR")
+    host_cache_dir  = os.environ.get("SHAI_HOST_CACHE_DIR")
     display_config_path  = str(Path(host_config_dir) / "config.yaml") if host_config_dir else str(CONFIG_PATH)
     display_context_path = str(Path(host_cache_dir) / "context") if host_cache_dir else str(CONTEXT_FILE)
 
