@@ -265,6 +265,18 @@ uninstall_shai_docker() {
     info "Removed Docker shell integration block from $ZSHRC"
   fi
 
+  # Clean up legacy/manual references in login profiles
+  local profile
+  for profile in "$HOME/.zprofile" "$HOME/.bash_profile" "$HOME/.profile"; do
+    if [ -f "$profile" ] && grep -q "shai-docker.sh" "$profile" 2>/dev/null; then
+      local tmp
+      tmp="$(mktemp)"
+      sed '/SHAI_IMAGE=/d; /shai-docker\.sh/d' "$profile" > "$tmp"
+      mv "$tmp" "$profile"
+      info "Removed Docker integration from $profile"
+    fi
+  done
+
   local docker_script="$HOME/.config/shai/shai-docker.sh"
   if [ -f "$docker_script" ]; then
     rm -f "$docker_script" 2>/dev/null || true
