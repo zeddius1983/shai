@@ -126,6 +126,7 @@ install_shai() {
   if [ -z "$_shai_path" ]; then
     warn "Could not determine shai shell integration path — add manually: source \"\$(shai --shell-path zsh)\""
   else
+    _zshrc_remove "shai"
     _zshrc_add "shai" "source \"$_shai_path\""
   fi
   ok "shai installed"
@@ -148,6 +149,7 @@ install_shai_implicit() {
   local bind="${SHAI_IMPLICIT_BIND:-^@}"
 
   step "Installing shai implicit mode (binding: $bind)..."
+  _zshrc_remove "shai-implicit"
   _zshrc_add "shai-implicit" \
     "function _shai_implicit_mode() {" \
     "  if [[ -n \"\${BUFFER}\" ]]; then" \
@@ -225,6 +227,7 @@ install_shai_docker() {
   chmod +x "$docker_script"
 
   # Patch .zshrc
+  _zshrc_remove "shai-docker"
   _zshrc_add "shai-docker" \
     "export SHAI_IMAGE=\"$image\"" \
     "source \"$docker_script\""
