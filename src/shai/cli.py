@@ -308,17 +308,12 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
 
 
 def _cmd_config():
-    # When running inside Docker the container path (/root/.config/…) is not useful
-    # to the user — show the host path passed via SHAI_HOST_CONFIG_DIR instead.
-    host_config_dir = os.environ.get("SHAI_HOST_CONFIG_DIR")
-    display_path = Path(host_config_dir) / "config.yaml" if host_config_dir else CONFIG_PATH
-
     if CONFIG_PATH.exists():
-        console.print(f"[bold]Config file:[/bold] {display_path}\n")
+        console.print(f"[bold]Config file:[/bold] {CONFIG_PATH}\n")
         console.print(CONFIG_PATH.read_text())
     else:
         save_default_config()
-        console.print(f"[green]Created default config:[/green] {display_path}")
+        console.print(f"[green]Created default config:[/green] {CONFIG_PATH}")
         console.print("\nEdit it to add your API keys and preferred provider.")
 
 
@@ -375,11 +370,6 @@ def _cmd_stats(provider_override, model_override):
     system_prompt = cfg.system_prompt + "\n\n" + format_for_prompt()
     system_tokens = len(system_prompt.split()) * 4 // 3
 
-    host_config_dir = os.environ.get("SHAI_HOST_CONFIG_DIR")
-    host_cache_dir  = os.environ.get("SHAI_HOST_CACHE_DIR")
-    display_config_path  = str(Path(host_config_dir) / "config.yaml") if host_config_dir else str(CONFIG_PATH)
-    display_context_path = str(Path(host_cache_dir) / "context") if host_cache_dir else str(CONTEXT_FILE)
-
     t = Table(show_header=False, box=None, padding=(0, 2))
     t.add_column(style="bold cyan", no_wrap=True)
     t.add_column()
@@ -392,8 +382,8 @@ def _cmd_stats(provider_override, model_override):
     t.add_row("Context limit", f"{cfg.context_lines} lines (max)")
     t.add_row("Context captured", f"{context_lines_actual} lines · {context_chars} chars · ~{est_tokens} tokens")
     t.add_row("System prompt", f"~{system_tokens} tokens")
-    t.add_row("Context file", display_context_path)
-    t.add_row("Config file", display_config_path)
+    t.add_row("Context file", str(CONTEXT_FILE))
+    t.add_row("Config file", str(CONFIG_PATH))
     t.add_row("", "")
     t.add_row("OS", sys_info["os"])
     t.add_row("Architecture", sys_info["arch"])

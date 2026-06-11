@@ -27,24 +27,22 @@ With tmux, the full screen output (including stderr) is captured. Without tmux, 
 
 ## Installation
 
-### Method 1: Shai Toolbox (Recommended for macOS/Linux)
+### Method 1: Installer (Recommended)
 
-Shai works out of the box in any terminal, but we provide a cross-platform, idempotent **installer** to perfectly configure your environment with shai and its shell integration (including implicit mode).
-
-Instead of installing things manually, run the installer directly from GitHub:
+Run directly from GitHub — installs `shai`, sets up shell integration and implicit mode:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh)"
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash
 ```
 
-This installs `shai` and configures `shai implicit mode` by default.
+`uv` is installed automatically if not already present. To install from a specific branch or fork:
 
-To install from a specific branch or fork, use this one-liner:
 ```bash
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shai/main"; REPO_URL=$REPO_URL /bin/bash -c "$(curl -fsSL $REPO_URL/install.sh)"
+REPO_URL="https://raw.githubusercontent.com/zeddius1983/shai/feature/1.0"
+REPO_URL=$REPO_URL curl -fsSL $REPO_URL/install.sh | bash
 ```
 
-> **Note:** Whenever `~/.zshrc` is modified by the installer, a backup is automatically created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
+> **Note:** Whenever `~/.zshrc` is modified, a backup is created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
 
 ### Method 2: pipx (Standalone)
 
@@ -64,20 +62,7 @@ source "$(shai --shell-path zsh)"
 source "$(shai --shell-path bash)"
 ```
 
-### Method 3: Docker (No Python required)
-
-```bash
-docker pull ghcr.io/zeddius1983/shai:latest
-```
-
-Add to `~/.zshrc` or `~/.bashrc`:
-
-```bash
-export SHAI_IMAGE="ghcr.io/zeddius1983/shai:latest"
-source /path/to/shai/shell/shai-docker.sh
-```
-
-### Method 4: Build from source
+### Method 3: Build from source
 
 ```bash
 git clone https://github.com/zeddius1983/shai
@@ -89,7 +74,7 @@ uv tool install .
 
 ## Uninstallation
 
-If you installed via the **Shai Toolbox** (Method 1), you can cleanly uninstall both `shai` and its implicit mode setup by running:
+If you installed via the **installer** (Method 1):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --uninstall
 ```
@@ -98,7 +83,7 @@ If you installed via **pipx** (Method 2):
 ```bash
 pipx uninstall shai
 ```
-And manually remove the `source "$(shai --shell-path zsh)"` line from your `~/.zshrc`.
+Then remove the `source "$(shai --shell-path zsh)"` line from your `~/.zshrc` manually.
 
 ---
 
@@ -225,8 +210,6 @@ providers:
 | [Anthropic](https://anthropic.com) | `anthropic` | Set `ANTHROPIC_API_KEY` |
 | llama.cpp / vLLM / any OpenAI-compatible | `openai` | Set `base_url` to your server |
 
-> **Docker note:** `localhost` in your config is automatically rewritten to `host.docker.internal` when shai runs inside a container, so local servers are always reachable.
-
 ---
 
 ## Development
@@ -243,7 +226,7 @@ uv sync
 
 # Build a wheel
 uv build
-# → dist/shai-0.1.0-py3-none-any.whl
+# → dist/shai-1.0.0-py3-none-any.whl
 ```
 
 ### Publishing to PyPI
@@ -253,12 +236,3 @@ uv build
 uv publish
 ```
 
-### Publishing to GitHub Container Registry
-
-Push to `main` or create a version tag — the included GitHub Actions workflow builds and pushes automatically:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-# → ghcr.io/zeddius1983/shai:0.1.0 and :latest
-```

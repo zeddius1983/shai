@@ -56,7 +56,6 @@
     *   **Local Servers:** Connects to local AI servers (such as LM Studio and Ollama).
     *   **Cloud Providers:** Integrates with OpenAI and Anthropic platforms.
     *   **Custom Endpoints:** Compatible with any custom server exposing a standard API interface.
-*   **Automatic Host Routing:** When `shai` is run within containerized environments, requests pointing to local servers are automatically routed back to the host machine.
 
 ---
 

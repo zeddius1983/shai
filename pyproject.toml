@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shai"
-version = "0.1.0"
+version = "1.0.0"
 description = "Shell AI — LLM-powered assistance directly in your terminal"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 keywords = ["shell", "ai", "llm", "terminal", "assistant"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",

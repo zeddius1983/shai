@@ -15,36 +15,19 @@ def _cache_dir() -> Path:
 
 CONTEXT_FILE = _cache_dir() / "context"
 
-# When running inside a container on macOS/Windows, use the appropriate internal hostname to reach host services.
-# On Linux Docker the gateway is typically 172.17.0.1.
-# SHAI_OLLAMA_HOST env var allows explicit override.
-def _container_host() -> str:
-    """Return the hostname to use for reaching services on the host machine."""
-    if os.path.exists("/.dockerenv"):
-        return "host.docker.internal"
-    if os.path.exists("/run/.containerenv"):
-        return "host.containers.internal"
-    return "localhost"
-
-
-def _local_base_url(port: int) -> str:
-    """Return base URL for a local server, using container-aware hostname when inside a container."""
-    return f"http://{_container_host()}:{port}/v1"
-
-
 DEFAULT_CONFIG = {
     "provider": "lmstudio",
     "context_lines": 100,
     "providers": {
         "lmstudio": {
             "type": "openai",
-            "base_url": _local_base_url(1234),
+            "base_url": "http://localhost:1234/v1",
             "api_key": "lmstudio",
             "model": "google/gemma-3-4b",
         },
         "ollama": {
             "type": "openai",
-            "base_url": _local_base_url(11434),
+            "base_url": "http://localhost:11434/v1",
             "api_key": "ollama",
             "model": "llama3.2",
         },
@@ -127,16 +110,11 @@ class Config:
                 f"Available: {list(self.providers.keys())}"
             )
         raw = self.providers[self.provider]
-        base_url = raw.get("base_url")
-        # Inside Docker/Podman, localhost on the config refers to the host machine
-        host = _container_host()
-        if base_url and host != "localhost":
-            base_url = base_url.replace("://localhost:", f"://{host}:")
         return ProviderConfig(
             type=raw.get("type", "openai"),
             model=raw["model"],
             api_key=raw.get("api_key"),
-            base_url=base_url,
+            base_url=raw.get("base_url"),
         )
 
 
