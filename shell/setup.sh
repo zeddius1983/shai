@@ -707,10 +707,11 @@ _show_menu() {
 
 main() {
 
-  local silent=0
+  local silent=0 uninstall=0
   for arg in "$@"; do
     case "$arg" in
-      --all|-a) silent=1 ;;
+      --all|-a)     silent=1 ;;
+      --uninstall)  uninstall=1 ;;
     esac
   done
   [ "${SETUP_SILENT:-0}" = "1" ] && silent=1
@@ -738,7 +739,10 @@ main() {
     i=$((i + 1))
   done
 
-  if [ "$silent" -eq 1 ]; then
+  if [ "$uninstall" -eq 1 ]; then
+    info "$(yellow "Uninstall mode: removing all installed shai components...")"
+    to_install=""
+  elif [ "$silent" -eq 1 ]; then
     info "$(yellow "Silent mode: selecting all components")"
     to_install="shai shai-implicit starship eza bat delta zoxide fzf atuin direnv glow ripgrep fd vim zsh-plugins"
   else
