@@ -38,11 +38,20 @@ Run directly from GitHub — installs `shai`, sets up shell integration and impl
 curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash
 ```
 
-`uv` is installed automatically if not already present. To install from a specific branch or fork:
+`uv` is installed automatically if not already present. To install a specific version or branch:
 
 ```bash
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shai/feature/1.0"
-REPO_URL=$REPO_URL curl -fsSL $REPO_URL/install.sh | bash
+# By version tag
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --version v1.1.0
+
+# By branch
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --version feature/v1.1.0
+```
+
+`--version` accepts any git ref (tag, branch, or SHA). It can be combined with other flags:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --version v1.1.0 --all
 ```
 
 > **Note:** Whenever `~/.zshrc` is modified, a backup is created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
