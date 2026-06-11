@@ -172,6 +172,8 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
 @click.option("--raw", "-r", is_flag=True, help="Stream raw text, disabling glow and rich rendering.")
 @click.option("--provider", "-p", default=None, help="Override the active provider.")
 @click.option("--model", "-m", default=None, help="Override the model.")
+@click.option("--stats", is_flag=True, help="Show provider, model, context size, and system info.")
+@click.option("--context", "show_context", is_flag=True, help="Show the full system prompt and captured terminal context.")
 @click.option(
     "--shell-path",
     type=click.Choice(["bash", "zsh"]),
@@ -179,7 +181,7 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
     help="Print path to shell integration script (for sourcing).",
 )
 @click.pass_context
-def main(ctx, query, no_context, raw, provider, model, shell_path):
+def main(ctx, query, no_context, raw, provider, model, stats, show_context, shell_path):
     """shai — Shell AI assistant.
 
     \b
@@ -188,6 +190,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
       shai how do I list open ports
       git pull-request 2>&1 | shai # pipe any output as context
       shai config                  # show/init config file
+      shai --stats                 # show provider, model, and system info
     """
     # --shell-path: print path to the integration script
     if shell_path:
@@ -195,23 +198,20 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
         click.echo(str(script.resolve()))
         return
 
+    if stats:
+        _cmd_stats(provider, model)
+        return
+
+    if show_context:
+        _cmd_context(provider, model)
+        return
+
     args = list(query)
 
-    # Special sub-commands
+    # config subcommand
     if args and args[0] == "config":
         _cmd_config()
         return
-    if args and args[0] == "context":
-        _cmd_context(provider, model)
-        return
-    if args and args[0] == "stats":
-        _cmd_stats(provider, model)
-        return
-    if args and args[0].startswith("/"):
-        cmd = args[0].lstrip("/")
-        err_console.print(f"[red]Unknown command:[/red] {args[0]}")
-        err_console.print(f"Hint: use [bold]shai {cmd}[/bold] — subcommands don't need a slash.")
-        sys.exit(1)
 
     try:
         cfg = load_config()
