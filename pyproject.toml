@@ -38,3 +38,8 @@ shai = "shai.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/shai"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]

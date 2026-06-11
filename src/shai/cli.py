@@ -376,9 +376,15 @@ def _cmd_stats(provider_override, model_override):
     t.add_column(style="bold cyan", no_wrap=True)
     t.add_column()
 
-    t.add_row("Provider", cfg.provider)
+    provider_display = (
+        f"auto → {pcfg.name}" if cfg.provider == "auto" else cfg.provider
+    )
+    model_display = (
+        f"auto → {pcfg.model}" if pcfg.model_was_auto else pcfg.model
+    )
+    t.add_row("Provider", provider_display)
     t.add_row("Type", pcfg.type)
-    t.add_row("Model", pcfg.model)
+    t.add_row("Model", model_display)
     t.add_row("Base URL", pcfg.base_url or "[dim]default[/dim]")
     t.add_row("", "")
     t.add_row("Context limit", f"{cfg.context_lines} lines (max)")
