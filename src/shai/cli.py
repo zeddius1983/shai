@@ -208,6 +208,11 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
 
     args = list(query)
 
+    if args and args[0].startswith("--"):
+        err_console.print(f"[red]Unknown option:[/red] {args[0]}")
+        err_console.print("Run [bold]shai --help[/bold] to see available options.")
+        sys.exit(1)
+
     # config subcommand
     if args and args[0] == "config":
         _cmd_config()
