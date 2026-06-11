@@ -84,17 +84,22 @@ elif [ -n "$BASH_VERSION" ]; then
     fi
 fi
 
+# Return the name of the available container runtime (docker or podman)
+_shai_container_bin() {
+    if command -v docker >/dev/null 2>&1; then
+        echo "docker"
+    elif command -v podman >/dev/null 2>&1; then
+        echo "podman"
+    else
+        echo "Error: Neither docker nor podman was found in PATH." >&2
+        return 1
+    fi
+}
+
 # Build the base docker run command into an array
 _shai_docker_cmd() {
-    local _container_bin="docker"
-    if ! command -v docker >/dev/null 2>&1; then
-        if command -v podman >/dev/null 2>&1; then
-            _container_bin="podman"
-        else
-            echo "Error: Neither docker nor podman was found in PATH." >&2
-            return 1
-        fi
-    fi
+    local _container_bin
+    _container_bin="$(_shai_container_bin)" || return 1
     local _stdin_flag=()
     [ -t 0 ] || _stdin_flag=(-i)
     echo_cmd=("$_container_bin" run --rm "${_stdin_flag[@]}"
@@ -119,15 +124,8 @@ _shai_docker_cmd() {
 _shai_do() {
     mkdir -p "$_shai_config_dir" "$_shai_cache_dir"
 
-    local _container_bin="docker"
-    if ! command -v docker >/dev/null 2>&1; then
-        if command -v podman >/dev/null 2>&1; then
-            _container_bin="podman"
-        else
-            echo "Error: Neither docker nor podman was found in PATH." >&2
-            return 1
-        fi
-    fi
+    local _container_bin
+    _container_bin="$(_shai_container_bin)" || return 1
 
     local _cmd=("$_container_bin" run --rm
         -e OPENAI_API_KEY
@@ -242,15 +240,8 @@ _shai() {
         return
     fi
 
-    local _container_bin="docker"
-    if ! command -v docker >/dev/null 2>&1; then
-        if command -v podman >/dev/null 2>&1; then
-            _container_bin="podman"
-        else
-            echo "Error: Neither docker nor podman was found in PATH." >&2
-            return 1
-        fi
-    fi
+    local _container_bin
+    _container_bin="$(_shai_container_bin)" || return 1
 
     local _tty_flags=()
     [ -t 0 ] && _tty_flags+=(-i)
@@ -280,8 +271,12 @@ _shai() {
 
 # noglob prevents zsh from expanding ?, *, ! etc. before passing args to shai
 SHAI_CMD_NAME="${SHAI_CMD_NAME:-shai}"
-if [ -n "$ZSH_VERSION" ]; then
-    eval "alias ${SHAI_CMD_NAME}='noglob _shai'"
+if ! [[ "$SHAI_CMD_NAME" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]; then
+    echo "shai-docker: invalid SHAI_CMD_NAME '${SHAI_CMD_NAME}' — must match [a-zA-Z_][a-zA-Z0-9_-]*" >&2
 else
-    eval "${SHAI_CMD_NAME}() { _shai \"\$@\"; }"
+    if [ -n "$ZSH_VERSION" ]; then
+        eval "alias ${SHAI_CMD_NAME}='noglob _shai'"
+    else
+        eval "${SHAI_CMD_NAME}() { _shai \"\$@\"; }"
+    fi
 fi

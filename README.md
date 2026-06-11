@@ -34,14 +34,14 @@ Shai works out of the box in any terminal, but we provide a cross-platform, idem
 Instead of installing things manually, run the installer directly from GitHub:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh)"
 ```
 
 This installs `shai` and configures `shai implicit mode` by default.
 
 To install from a specific branch or fork, use this one-liner:
 ```bash
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shell-assistant/feature/1.0"; REPO_URL=$REPO_URL /bin/bash -c "$(curl -fsSL $REPO_URL/install.sh)"
+REPO_URL="https://raw.githubusercontent.com/zeddius1983/shai/main"; REPO_URL=$REPO_URL /bin/bash -c "$(curl -fsSL $REPO_URL/install.sh)"
 ```
 
 > **Note:** Whenever `~/.zshrc` is modified by the installer, a backup is automatically created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
@@ -74,14 +74,14 @@ Add to `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 export SHAI_IMAGE="ghcr.io/zeddius1983/shai:latest"
-source /path/to/shell-assistant/shell/shai-docker.sh
+source /path/to/shai/shell/shai-docker.sh
 ```
 
 ### Method 4: Build from source
 
 ```bash
-git clone https://github.com/zeddius1983/shell-assistant
-cd shell-assistant
+git clone https://github.com/zeddius1983/shai
+cd shai
 uv tool install .
 ```
 
@@ -91,7 +91,7 @@ uv tool install .
 
 If you installed via the **Shai Toolbox** (Method 1), you can cleanly uninstall both `shai` and its implicit mode setup by running:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh | bash -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --uninstall
 ```
 
 If you installed via **pipx** (Method 2):
@@ -232,8 +232,8 @@ providers:
 ## Development
 
 ```bash
-git clone https://github.com/zeddius1983/shell-assistant
-cd shell-assistant
+git clone https://github.com/zeddius1983/shai
+cd shai
 
 # Install dev environment
 uv sync

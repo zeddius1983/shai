@@ -29,12 +29,12 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/zeddius1983/shell-assistant"
-Repository = "https://github.com/zeddius1983/shell-assistant"
-Issues = "https://github.com/zeddius1983/shell-assistant/issues"
+Homepage = "https://github.com/zeddius1983/shai"
+Repository = "https://github.com/zeddius1983/shai"
+Issues = "https://github.com/zeddius1983/shai/issues"
 
 [project.scripts]
-shai = "core.cli:main"
+shai = "shai.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["core"]
+packages = ["src/shai"]

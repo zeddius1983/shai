@@ -9,7 +9,7 @@
 #     ./shell/setup.sh --uninstall
 #
 #   Via curl:
-#     curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh | bash
+#     curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash
 #
 
 set -euo pipefail
@@ -106,7 +106,7 @@ install_shai() {
     export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
   fi
 
-  local git_url="git+https://github.com/zeddius1983/shell-assistant.git"
+  local git_url="git+https://github.com/zeddius1983/shai.git"
   if [ -n "${REPO_URL:-}" ]; then
     if [[ "$REPO_URL" =~ ^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/(.+)$ ]]; then
       local owner="${BASH_REMATCH[1]}"
@@ -333,11 +333,14 @@ _show_interactive_menu() {
     fi
   }
 
-  # Hide cursor
+  # Save terminal state, hide cursor, restore both on exit
+  local _old_stty
+  _old_stty="$(stty -g 2>/dev/null || true)"
   tui_print "\033[?25l"
-  
+
   cleanup() {
     tui_print "\033[?25h"
+    [ -n "$_old_stty" ] && stty "$_old_stty" 2>/dev/null || true
   }
   trap cleanup EXIT
 

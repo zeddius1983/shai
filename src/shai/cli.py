@@ -108,7 +108,8 @@ def _unwrap_markdown_fence(text: str) -> str:
 def _get_padded_renderable(renderable):
     """Pads a renderable left and right by 4 spaces and limits the maximum width to 90 characters."""
     term_width = console.width if console.width is not None else 80
-    render_width = min(90, term_width - 8) if term_width > 20 else term_width
+    # pad_edge=True with (0,4,0,4) adds 8 chars around the column; subtract that from the cap
+    render_width = min(82, term_width - 8) if term_width > 20 else term_width
     t = Table.grid(padding=(0, 4, 0, 4), pad_edge=True)
     t.add_column(width=render_width)
     t.add_row(renderable)
@@ -254,7 +255,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             console.print(_get_padded_renderable(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan")))
 
             while True:
-                choice = click.prompt("    Run this command? [Y/n/e]", default="y").strip().lower()
+                choice = click.prompt("Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
                     console.print()
                     _run_shell_command(command)
