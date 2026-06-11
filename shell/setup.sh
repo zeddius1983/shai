@@ -117,6 +117,14 @@ install_shai() {
     _zshrc_add "shai" "source \"$_shai_path\""
   fi
 
+  local _config_path="${XDG_CONFIG_HOME:-$HOME/.config}/shai/config.yaml"
+  if [ ! -f "$_config_path" ]; then
+    shai config > /dev/null 2>&1 || true
+    ok "Created default config: $_config_path"
+  else
+    info "$(dim "Config already exists — skipping: $_config_path")"
+  fi
+
   ok "shai installed"
 }
 
