@@ -156,6 +156,8 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
 
         if buffer:
             console.print(_get_padded_renderable(Markdown(buffer)))
+        else:
+            err_console.print("[yellow]No response received from provider.[/yellow]")
 
 
 @click.command(
