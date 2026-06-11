@@ -119,9 +119,9 @@ shai -p openai -m gpt-4o how do I list listening ports
 |---|---|
 | `shai help` | Analyse your last terminal output and explain errors |
 | `shai do <task>` | Generate a shell command, preview it, confirm before running |
-| `shai /config` | Show the active config file, or create a default one |
-| `shai /context` | Show the full system prompt and captured terminal context |
-| `shai /stats` | Show provider, model, context size, and system info |
+| `shai config` | Show the active config file, or create a default one |
+| `shai context` | Show the full system prompt and captured terminal context |
+| `shai stats` | Show provider, model, context size, and system info |
 
 ### Flags
 
@@ -138,7 +138,7 @@ shai -p openai -m gpt-4o how do I list listening ports
 
 Generate the default config file:
 ```bash
-shai /config
+shai config
 ```
 
 This creates `~/.config/shai/config.yaml`:

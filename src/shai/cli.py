@@ -187,7 +187,7 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
       shai help                    # explain the last error in your terminal
       shai how do I list open ports
       git pull-request 2>&1 | shai # pipe any output as context
-      shai /config                 # show/init config file
+      shai config                  # show/init config file
     """
     # --shell-path: print path to the integration script
     if shell_path:
@@ -198,18 +198,19 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
     args = list(query)
 
     # Special sub-commands
-    if args and args[0] in ("/config", "config"):
+    if args and args[0] == "config":
         _cmd_config()
         return
-    if args and args[0] == "/context":
+    if args and args[0] == "context":
         _cmd_context(provider, model)
         return
-    if args and args[0] == "/stats":
+    if args and args[0] == "stats":
         _cmd_stats(provider, model)
         return
     if args and args[0].startswith("/"):
+        cmd = args[0].lstrip("/")
         err_console.print(f"[red]Unknown command:[/red] {args[0]}")
-        err_console.print("Available: [bold]/config[/bold]  [bold]/context[/bold]  [bold]/stats[/bold]")
+        err_console.print(f"Hint: use [bold]shai {cmd}[/bold] — subcommands don't need a slash.")
         sys.exit(1)
 
     try:
