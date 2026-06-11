@@ -372,7 +372,11 @@ def _cmd_stats(provider_override, model_override):
     if model_override and cfg.provider in cfg.providers:
         cfg.providers[cfg.provider]["model"] = model_override
 
-    pcfg = cfg.get_active_provider()
+    try:
+        pcfg = cfg.get_active_provider()
+    except ValueError as e:
+        err_console.print(f"[red]Error:[/red] {e}")
+        sys.exit(1)
     sys_info = get_system_info()
     context = get_context(cfg.context_lines)
     context_lines_actual = len(context.splitlines()) if context else 0
