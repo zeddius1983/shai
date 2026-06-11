@@ -2,14 +2,19 @@
 # shai installer bootstrapper
 #
 # Usage:
-#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh)"
+#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh)"
 #
 #   Silent / Non-interactive:
-#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/shell-assistant/main/install.sh | bash -s -- --all
+#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --all
 
 set -euo pipefail
 
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shell-assistant/main"
+# If running locally from the repository, delegate directly to the local setup.sh
+if [ -f "$(dirname "$0")/shell/setup.sh" ]; then
+    exec "$(dirname "$0")/shell/setup.sh" "$@"
+fi
+
+REPO_URL="${REPO_URL:-https://raw.githubusercontent.com/zeddius1983/shai/main}"
 TMP_DIR="$(mktemp -d)"
 
 # Cleanup on exit
@@ -21,6 +26,4 @@ mkdir -p "$TMP_DIR/shell"
 curl -sSLo "$TMP_DIR/shell/setup.sh" "$REPO_URL/shell/setup.sh"
 chmod +x "$TMP_DIR/shell/setup.sh"
 
-curl -sSLo "$TMP_DIR/shell/starship.toml" "$REPO_URL/shell/starship.toml"
-
-"$TMP_DIR/shell/setup.sh" "$@"
+REPO_URL="$REPO_URL" "$TMP_DIR/shell/setup.sh" "$@"

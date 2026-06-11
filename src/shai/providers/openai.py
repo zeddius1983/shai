@@ -35,7 +35,7 @@ class OpenAIProvider(Provider):
             ],
         }
 
-        with httpx.Client(timeout=60) as client:
+        with httpx.Client(timeout=httpx.Timeout(10.0, read=300.0)) as client:
             with client.stream(
                 "POST",
                 f"{self.base_url}/chat/completions",

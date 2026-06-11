@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 import subprocess
@@ -21,16 +22,17 @@ from .config import CONTEXT_FILE
 from .system_info import format_for_prompt, get_system_info
 from .context import get_context
 from .providers import get_provider
+console = Console()
+err_console = Console(stderr=True)
 
-import os as _os
-_term_width = _os.get_terminal_size().columns if _os.isatty(1) else 120
-console = Console(width=_term_width)
-err_console = Console(stderr=True, width=_term_width)
 
+def _run_shell_command(command: str) -> None:
+    """Execute a shell command using the user's preferred shell."""
+    shell = os.environ.get("SHELL") or shutil.which("bash") or shutil.which("sh") or "sh"
+    subprocess.run([shell, "-c", command])
 
 def _find_bash4() -> str:
     """Return path to bash 4+ (supports read -e -i), or empty string."""
-    import re
     candidates = ["/opt/homebrew/bin/bash", "/usr/local/bin/bash", "bash"]
     for candidate in candidates:
         path = shutil.which(candidate)
@@ -48,7 +50,7 @@ def _find_bash4() -> str:
 
 def _edit_inline(command: str) -> str:
     """Open command for inline editing with readline pre-fill."""
-    import platform, shlex, tempfile, os as _os
+    import platform, shlex, tempfile
 
     # bash read -e -i pre-fills the readline buffer reliably.
     # Linux always has bash 4+; macOS ships bash 3.2 (no -i support) so we
@@ -71,7 +73,7 @@ def _edit_inline(command: str) -> str:
             script = f'_v={shlex.quote(command)}; vared -p "$ " _v; printf "%s" "$_v" > {shlex.quote(tmpfile)}'
             subprocess.run(["/bin/zsh", "--no-rcs", "-i", "-c", script])
         else:
-            _os.unlink(tmpfile)
+            os.unlink(tmpfile)
             tmpfile = None
             try:
                 import readline
@@ -88,12 +90,12 @@ def _edit_inline(command: str) -> str:
                 return edited.strip() if edited else command
 
         if tmpfile:
-            result = open(tmpfile).read().strip()
+            result = Path(tmpfile).read_text().strip()
             return result if result else command
         return command
     finally:
-        if tmpfile and _os.path.exists(tmpfile):
-            _os.unlink(tmpfile)
+        if tmpfile and os.path.exists(tmpfile):
+            os.unlink(tmpfile)
 
 
 def _unwrap_markdown_fence(text: str) -> str:
@@ -101,6 +103,17 @@ def _unwrap_markdown_fence(text: str) -> str:
     stripped = text.strip()
     match = re.match(r'^```(?:markdown)?\n(.*?)```\s*$', stripped, re.DOTALL)
     return match.group(1) if match else text
+
+
+def _get_padded_renderable(renderable):
+    """Pads a renderable left and right by 4 spaces and limits the maximum width to 90 characters."""
+    term_width = console.width if console.width is not None else 80
+    # pad_edge=True with (0,4,0,4) adds 8 chars around the column; subtract that from the cap
+    render_width = min(82, term_width - 8) if term_width > 20 else term_width
+    t = Table.grid(padding=(0, 4, 0, 4), pad_edge=True)
+    t.add_column(width=render_width)
+    t.add_row(renderable)
+    return t
 
 
 def build_prompt(question: str, context: Optional[str]) -> str:
@@ -124,9 +137,10 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
         except KeyboardInterrupt:
             pass
         print()
-    elif shutil.which("glow"):
-        # Buffer with a spinner, then render with glow
+    else:
+        # Buffered rich markdown rendering with dynamic spinner
         try:
+            console.print()
             with Live(
                 Text("  thinking…", style="dim"),
                 console=console,
@@ -139,18 +153,9 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
                     live.update(Text(f"  thinking… ({word_count} words)", style="dim"))
         except KeyboardInterrupt:
             pass
+
         if buffer:
-            rendered = textwrap.dedent(_unwrap_markdown_fence(buffer))
-            subprocess.run(["glow", "-"], input=rendered.encode(), check=False)
-    else:
-        # Fallback: live rich markdown rendering
-        try:
-            with Live(Markdown(""), console=console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for chunk in provider.stream(system, prompt):
-                    buffer += chunk
-                    live.update(Markdown(buffer))
-        except KeyboardInterrupt:
-            pass
+            console.print(_get_padded_renderable(Markdown(buffer)))
 
 
 @click.command(
@@ -223,15 +228,16 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             sys.exit(1)
         try:
             system = DO_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
-            provider = get_provider(cfg.get_active_provider())
+            llm = get_provider(cfg.get_active_provider())
             buffer = ""
+            console.print()
             with Live(
                 Text("  thinking…", style="dim"),
                 console=console,
                 refresh_per_second=12,
                 transient=True,
             ) as live:
-                for chunk in provider.stream(system, task):
+                for chunk in llm.stream(system, task):
                     buffer += chunk
                     live.update(Text(f"  thinking… ({len(buffer.split())} words)", style="dim"))
 
@@ -239,25 +245,26 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
             cleaned = textwrap.dedent(_unwrap_markdown_fence(buffer))
             match = re.search(r'```bash\n(.*?)```', cleaned, re.DOTALL)
             if not match:
-                console.print(cleaned)
+                console.print(_get_padded_renderable(Markdown(cleaned)))
                 return
             command = match.group(1).strip()
             explanation = cleaned[:match.start()].strip()
 
             if explanation:
-                console.print(explanation)
-            console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                console.print(_get_padded_renderable(Markdown(explanation)))
+            console.print(_get_padded_renderable(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan")))
 
             while True:
                 choice = click.prompt("Run this command? [Y/n/e]", default="y").strip().lower()
                 if choice in ("y", ""):
-                    subprocess.run(["bash", "-c", command])
+                    console.print()
+                    _run_shell_command(command)
                     break
                 elif choice == "n":
                     break
                 elif choice == "e":
                     command = _edit_inline(command)
-                    console.print(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan"))
+                    console.print(_get_padded_renderable(Panel(Syntax(command, "bash", theme="ansi_dark"), border_style="cyan")))
                 else:
                     console.print("[dim]Enter y, n, or e[/dim]")
         except Exception as e:
@@ -301,18 +308,12 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
 
 
 def _cmd_config():
-    # When running inside Docker the container path (/root/.config/…) is not useful
-    # to the user — show the host path passed via SHAI_HOST_CONFIG_DIR instead.
-    import os as _os
-    host_config_dir = _os.environ.get("SHAI_HOST_CONFIG_DIR")
-    display_path = Path(host_config_dir) / "config.yaml" if host_config_dir else CONFIG_PATH
-
     if CONFIG_PATH.exists():
-        console.print(f"[bold]Config file:[/bold] {display_path}\n")
+        console.print(f"[bold]Config file:[/bold] {CONFIG_PATH}\n")
         console.print(CONFIG_PATH.read_text())
     else:
         save_default_config()
-        console.print(f"[green]Created default config:[/green] {display_path}")
+        console.print(f"[green]Created default config:[/green] {CONFIG_PATH}")
         console.print("\nEdit it to add your API keys and preferred provider.")
 
 
@@ -331,7 +332,7 @@ def _cmd_context(provider_override, model_override):
     system = cfg.system_prompt + "\n\n" + format_for_prompt()
     context = get_context(cfg.context_lines)
 
-    console.print(Panel(system, title="[bold cyan]System Prompt[/bold cyan]", border_style="cyan"))
+    console.print(Panel(Markdown(system), title="[bold cyan]System Prompt[/bold cyan]", border_style="cyan"))
     console.print()
     if context:
         console.print(Panel(
@@ -369,12 +370,6 @@ def _cmd_stats(provider_override, model_override):
     system_prompt = cfg.system_prompt + "\n\n" + format_for_prompt()
     system_tokens = len(system_prompt.split()) * 4 // 3
 
-    import os as _os
-    host_config_dir = _os.environ.get("SHAI_HOST_CONFIG_DIR")
-    host_cache_dir  = _os.environ.get("SHAI_HOST_CACHE_DIR")
-    display_config_path  = str(Path(host_config_dir) / "config.yaml") if host_config_dir else str(CONFIG_PATH)
-    display_context_path = str(Path(host_cache_dir) / "context") if host_cache_dir else str(CONTEXT_FILE)
-
     t = Table(show_header=False, box=None, padding=(0, 2))
     t.add_column(style="bold cyan", no_wrap=True)
     t.add_column()
@@ -387,8 +382,8 @@ def _cmd_stats(provider_override, model_override):
     t.add_row("Context limit", f"{cfg.context_lines} lines (max)")
     t.add_row("Context captured", f"{context_lines_actual} lines · {context_chars} chars · ~{est_tokens} tokens")
     t.add_row("System prompt", f"~{system_tokens} tokens")
-    t.add_row("Context file", display_context_path)
-    t.add_row("Config file", display_config_path)
+    t.add_row("Context file", str(CONTEXT_FILE))
+    t.add_row("Config file", str(CONFIG_PATH))
     t.add_row("", "")
     t.add_row("OS", sys_info["os"])
     t.add_row("Architecture", sys_info["arch"])

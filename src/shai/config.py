@@ -15,28 +15,19 @@ def _cache_dir() -> Path:
 
 CONTEXT_FILE = _cache_dir() / "context"
 
-# When running inside Docker on macOS/Windows, use host.docker.internal to reach host services.
-# On Linux Docker the gateway is typically 172.17.0.1.
-# SHAI_OLLAMA_HOST env var allows explicit override.
-def _local_base_url(port: int) -> str:
-    """Return base URL for a local server, using host.docker.internal when inside Docker."""
-    host = "host.docker.internal" if os.path.exists("/.dockerenv") else "localhost"
-    return f"http://{host}:{port}/v1"
-
-
 DEFAULT_CONFIG = {
     "provider": "lmstudio",
     "context_lines": 100,
     "providers": {
         "lmstudio": {
             "type": "openai",
-            "base_url": _local_base_url(1234),
+            "base_url": "http://localhost:1234/v1",
             "api_key": "lmstudio",
             "model": "google/gemma-3-4b",
         },
         "ollama": {
             "type": "openai",
-            "base_url": _local_base_url(11434),
+            "base_url": "http://localhost:11434/v1",
             "api_key": "ollama",
             "model": "llama3.2",
         },
@@ -119,15 +110,11 @@ class Config:
                 f"Available: {list(self.providers.keys())}"
             )
         raw = self.providers[self.provider]
-        base_url = raw.get("base_url")
-        # Inside Docker, localhost on the config refers to the host machine
-        if base_url and os.path.exists("/.dockerenv"):
-            base_url = base_url.replace("://localhost:", "://host.docker.internal:")
         return ProviderConfig(
             type=raw.get("type", "openai"),
             model=raw["model"],
             api_key=raw.get("api_key"),
-            base_url=base_url,
+            base_url=raw.get("base_url"),
         )
 
 

@@ -77,7 +77,7 @@ def _tmux_capture(lines: int) -> Optional[str]:
 
 
 def _history_fallback(n: int) -> Optional[str]:
-    """Read last n entries from $HISTFILE."""
+    """Read last n entries from $HISTFILE, reading only the tail of the file."""
     histfile = os.environ.get("HISTFILE", "")
     if not histfile:
         shell = os.environ.get("SHELL", "")
@@ -91,9 +91,24 @@ def _history_fallback(n: int) -> Optional[str]:
         return None
 
     try:
+        # Read only the last 64 KB to avoid loading huge history files
+        tail_bytes = 65536
+        with open(path, "rb") as f:
+            f.seek(0, 2)  # seek to end
+            file_size = f.tell()
+            read_pos = max(0, file_size - tail_bytes)
+            f.seek(read_pos)
+            raw = f.read().decode("utf-8", errors="replace")
+
+        # If we didn't read from the start, discard the first (partial) line
+        if read_pos > 0:
+            first_nl = raw.find("\n")
+            if first_nl != -1:
+                raw = raw[first_nl + 1:]
+
         # zsh history may use extended format (; lines). Strip those.
         lines = []
-        for line in path.read_text(errors="replace").splitlines():
+        for line in raw.splitlines():
             if line.startswith(":") and line.count(":") >= 2:
                 # extended format ": <timestamp>:<elapsed>;<cmd>"
                 parts = line.split(";", 1)
@@ -104,3 +119,4 @@ def _history_fallback(n: int) -> Optional[str]:
         return "\n".join(lines[-n:]) or None
     except OSError:
         return None
+
