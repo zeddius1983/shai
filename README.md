@@ -6,6 +6,9 @@ LLM-powered assistant for your terminal. Get contextual help from your local or 
 
 Inspired by [PEEL](https://github.com/lemonade-sdk/peel) for PowerShell.
 
+**Supported platforms:** macOS, Linux  
+**Supported shells:** zsh, bash
+
 ```
 $ git pull-request
 git: 'pull-request' is not a git command. See 'git --help'.
@@ -44,25 +47,7 @@ REPO_URL=$REPO_URL curl -fsSL $REPO_URL/install.sh | bash
 
 > **Note:** Whenever `~/.zshrc` is modified, a backup is created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
 
-### Method 2: pipx (Standalone)
-
-```bash
-pipx install shai
-```
-
-Then add shell integration manually — add one of the following to your shell RC file:
-
-```zsh
-# ~/.zshrc
-source "$(shai --shell-path zsh)"
-```
-
-```bash
-# ~/.bashrc
-source "$(shai --shell-path bash)"
-```
-
-### Method 3: Build from source
+### Method 2: Build from source
 
 ```bash
 git clone https://github.com/zeddius1983/shai
@@ -79,19 +64,13 @@ If you installed via the **installer** (Method 1):
 curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --uninstall
 ```
 
-If you installed via **pipx** (Method 2):
-```bash
-pipx uninstall shai
-```
-Then remove the `source "$(shai --shell-path zsh)"` line from your `~/.zshrc` manually.
-
 ---
 
 ## Usage
 
 ### Implicit Mode (Ctrl+Space)
 
-If you enabled `[x] shai implicit mode` in the Shai Toolbox installer, you can type any question directly into your terminal and press `Ctrl+Space`:
+Implicit mode is installed automatically with shai. Type any question directly into your terminal and press `Ctrl+Space`:
 
 ```bash
 find the largest file in this folder[Press Ctrl+Space]
@@ -229,10 +208,4 @@ uv build
 # → dist/shai-1.0.0-py3-none-any.whl
 ```
 
-### Publishing to PyPI
-
-```bash
-uv build
-uv publish
-```
 
