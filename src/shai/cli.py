@@ -207,6 +207,10 @@ def main(ctx, query, no_context, raw, provider, model, shell_path):
     if args and args[0] == "/stats":
         _cmd_stats(provider, model)
         return
+    if args and args[0].startswith("/"):
+        err_console.print(f"[red]Unknown command:[/red] {args[0]}")
+        err_console.print("Available: [bold]/config[/bold]  [bold]/context[/bold]  [bold]/stats[/bold]")
+        sys.exit(1)
 
     try:
         cfg = load_config()
