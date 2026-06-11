@@ -100,6 +100,7 @@ install_shai() {
   else
     _zshrc_add "shai" "source \"$_shai_path\""
   fi
+  install_shai_implicit
   ok "shai installed"
 }
 
@@ -107,6 +108,7 @@ uninstall_shai() {
   step "Uninstalling shai..."
   uv tool uninstall shai 2>/dev/null || true
   _zshrc_remove "shai"
+  uninstall_shai_implicit
   ok "shai uninstalled"
 }
 
@@ -146,9 +148,7 @@ uninstall_shai_implicit() {
 
 # Menu entries: "key|label|description" OR "H|Header Title"
 MENU_ENTRIES=(
-  "H|🧠 Shai"
-  "shai|shai|AI shell assistant"
-  "shai-implicit|shai implicit mode|Run shai on current buffer with custom hotkey"
+  "shai|shai|AI shell assistant (includes implicit mode)"
 )
 
 _show_menu() {
@@ -325,11 +325,11 @@ main() {
     to_install=""
   elif [ "$silent" -eq 1 ]; then
     info "$(yellow "Silent mode: installing all components")"
-    to_install="shai shai-implicit"
+    to_install="shai"
   else
     if [ ! -t 0 ] || [ ! -t 1 ]; then
       warn "No TTY detected (running via pipe?). Switching to --all mode."
-      to_install="shai shai-implicit"
+      to_install="shai"
     else
       local _menu_tmp
       _menu_tmp="$(mktemp)"
