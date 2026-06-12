@@ -29,7 +29,7 @@ jobs:
 
     environment:
       name: pypi
-      url: https://pypi.org/project/shai/
+      url: https://pypi.org/project/seer/
 
     permissions:
       id-token: write   # required for Trusted Publishing (OIDC)

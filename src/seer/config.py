@@ -1,35 +1,43 @@
 import os
 import yaml
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-CONFIG_PATH = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "shai" / "config.yaml"
+import httpx
+
+CONFIG_PATH = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "seer" / "config.yaml"
 
 def _cache_dir() -> Path:
     if os.environ.get("XDG_CACHE_HOME"):
-        return Path(os.environ["XDG_CACHE_HOME"]) / "shai"
+        return Path(os.environ["XDG_CACHE_HOME"]) / "seer"
     if os.uname().sysname == "Darwin":
-        return Path.home() / "Library" / "Caches" / "shai"
-    return Path.home() / ".cache" / "shai"
+        return Path.home() / "Library" / "Caches" / "seer"
+    return Path.home() / ".cache" / "seer"
 
 CONTEXT_FILE = _cache_dir() / "context"
 
 DEFAULT_CONFIG = {
-    "provider": "lmstudio",
+    "provider": "auto",
     "context_lines": 100,
     "providers": {
+        "llamacpp": {
+            "type": "openai",
+            "base_url": "http://127.0.0.1:8080/v1",
+            "api_key": "llamacpp",
+            "model": "auto",
+        },
         "lmstudio": {
             "type": "openai",
-            "base_url": "http://localhost:1234/v1",
+            "base_url": "http://127.0.0.1:1234/v1",
             "api_key": "lmstudio",
-            "model": "google/gemma-3-4b",
+            "model": "auto",
         },
         "ollama": {
             "type": "openai",
             "base_url": "http://localhost:11434/v1",
             "api_key": "ollama",
-            "model": "llama3.2",
+            "model": "auto",
         },
         "openai": {
             "type": "openai",
@@ -44,7 +52,21 @@ DEFAULT_CONFIG = {
     },
 }
 
-SYSTEM_PROMPT = """You are shai, a concise shell assistant embedded in the user's terminal.
+
+def _list_openai_models(base_url: str, api_key: str) -> list[str]:
+    """Probe an OpenAI-compatible /v1/models endpoint. Returns model ID list or [] on failure."""
+    try:
+        url = base_url.rstrip("/") + "/models"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        resp = httpx.get(url, headers=headers, timeout=2.0)
+        if resp.status_code == 200:
+            data = resp.json()
+            return [m["id"] for m in data.get("data", []) if "id" in m]
+    except Exception:
+        pass
+    return []
+
+SYSTEM_PROMPT = """You are seer, a concise shell assistant embedded in the user's terminal.
 
 ## Formatting rules (always follow these)
 - Always respond in well-structured Markdown.
@@ -67,7 +89,7 @@ When given terminal context (error analysis mode):
 When asked a question (no context):
 - Answer directly and concisely using the formatting rules above."""
 
-DO_SYSTEM_PROMPT = """You are shai, a shell command assistant. The user wants you to perform a task on their system.
+DO_SYSTEM_PROMPT = """You are seer, a shell command assistant. The user wants you to perform a task on their system.
 
 Your response must follow this exact structure:
 1. One or two sentences explaining what the command will do.
@@ -94,6 +116,8 @@ class ProviderConfig:
     model: str
     api_key: Optional[str] = None
     base_url: Optional[str] = None
+    name: Optional[str] = None        # resolved provider key (set when auto-resolved)
+    model_was_auto: bool = False      # True when model was resolved from "auto"
 
 
 @dataclass
@@ -104,18 +128,56 @@ class Config:
     system_prompt: str = SYSTEM_PROMPT
 
     def get_active_provider(self) -> ProviderConfig:
-        if self.provider not in self.providers:
+        provider_name = self.provider
+        prefetched_models: list[str] = []
+
+        if provider_name == "auto":
+            provider_name, prefetched_models = self._resolve_auto_provider()
+            if provider_name is None:
+                raise ValueError(
+                    "provider: auto — no configured provider is reachable.\n"
+                    "Start a local LLM server (llama.cpp, LM Studio, Ollama) "
+                    "or set a specific provider in your config."
+                )
+
+        if provider_name not in self.providers:
             raise ValueError(
-                f"Provider '{self.provider}' not found in config. "
+                f"Provider '{provider_name}' not found in config. "
                 f"Available: {list(self.providers.keys())}"
             )
-        raw = self.providers[self.provider]
+
+        raw = self.providers[provider_name]
+        model = raw.get("model", "")
+        model_was_auto = model == "auto"
+
+        if model_was_auto:
+            models = prefetched_models or _list_openai_models(
+                raw.get("base_url", ""), raw.get("api_key", "no-key")
+            )
+            if not models:
+                raise ValueError(
+                    f"model: auto — could not fetch model list from '{provider_name}'."
+                )
+            model = models[0]
+
         return ProviderConfig(
             type=raw.get("type", "openai"),
-            model=raw["model"],
+            model=model,
             api_key=raw.get("api_key"),
             base_url=raw.get("base_url"),
+            name=provider_name,
+            model_was_auto=model_was_auto,
         )
+
+    def _resolve_auto_provider(self) -> tuple[Optional[str], list[str]]:
+        """Return (provider_name, model_list) for the first reachable provider."""
+        for name, raw in self.providers.items():
+            if raw.get("type") != "openai" or not raw.get("base_url"):
+                continue
+            models = _list_openai_models(raw["base_url"], raw.get("api_key", "no-key"))
+            if models:
+                return name, models
+        return None, []
 
 
 def load_config() -> Config:

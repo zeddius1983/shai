@@ -1,4 +1,4 @@
-# shai — Shell AI
+# SEER - Shell Enhanced Execution & Reasoning
 
 ![Built with AI assistance](https://img.shields.io/badge/Built%20with-AI%20assistance-blueviolet?logo=openai&logoColor=white)
 
@@ -13,7 +13,7 @@ Inspired by [PEEL](https://github.com/lemonade-sdk/peel) for PowerShell.
 $ git pull-request
 git: 'pull-request' is not a git command. See 'git --help'.
 
-$ shai help
+$ seer help
 The command `git pull-request` is not valid. Use `git pull` to fetch and
 merge, or install the `gh` CLI and run `gh pr create` to open a pull request.
 ```
@@ -22,7 +22,7 @@ merge, or install the `gh` CLI and run `gh pr create` to open a pull request.
 
 ## How it works
 
-Shell hooks (`PROMPT_COMMAND` / `precmd`) save your terminal's scrollback after every command. When you run `shai help`, the saved context is sent to your LLM of choice. No copy-pasting, no switching windows.
+Shell hooks (`PROMPT_COMMAND` / `precmd`) save your terminal's scrollback after every command. When you run `seer help`, the saved context is sent to your LLM of choice. No copy-pasting, no switching windows.
 
 With tmux, the full screen output (including stderr) is captured. Without tmux, the last command and exit code are saved as fallback.
 
@@ -32,17 +32,26 @@ With tmux, the full screen output (including stderr) is captured. Without tmux, 
 
 ### Method 1: Installer (Recommended)
 
-Run directly from GitHub — installs `shai`, sets up shell integration and implicit mode:
+Run directly from GitHub — installs `seer`, sets up shell integration and implicit mode:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash
 ```
 
-`uv` is installed automatically if not already present. To install from a specific branch or fork:
+`uv` is installed automatically if not already present. To install a specific version or branch:
 
 ```bash
-REPO_URL="https://raw.githubusercontent.com/zeddius1983/shai/feature/1.0"
-REPO_URL=$REPO_URL curl -fsSL $REPO_URL/install.sh | bash
+# By version tag
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --version v1.1.0
+
+# By branch
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --version feature/v1.1.0
+```
+
+`--version` accepts any git ref (tag, branch, or SHA). It can be combined with other flags:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --version v1.1.0 --all
 ```
 
 > **Note:** Whenever `~/.zshrc` is modified, a backup is created first as `~/.zshrc.YYYYMMDD_HHMMSS.bak`.
@@ -50,8 +59,8 @@ REPO_URL=$REPO_URL curl -fsSL $REPO_URL/install.sh | bash
 ### Method 2: Build from source
 
 ```bash
-git clone https://github.com/zeddius1983/shai
-cd shai
+git clone https://github.com/zeddius1983/seer
+cd seer
 uv tool install .
 ```
 
@@ -61,7 +70,7 @@ uv tool install .
 
 If you installed via the **installer** (Method 1):
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --uninstall
 ```
 
 ---
@@ -70,58 +79,58 @@ curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | 
 
 ### Implicit Mode (Ctrl+Space)
 
-Implicit mode is installed automatically with shai. Type any question directly into your terminal and press `Ctrl+Space`:
+Implicit mode is installed automatically with seer. Type any question directly into your terminal and press `Ctrl+Space`:
 
 ```bash
 find the largest file in this folder[Press Ctrl+Space]
-# Instantly expands and runs: shai find the largest file in this folder
+# Instantly expands and runs: seer find the largest file in this folder
 ```
 
 ### Standard Commands
 
 ```bash
 # Explain what just went wrong
-shai help
+seer help
 
 # Ask anything shell-related
-shai how to list all datasets in a ZFS pool
-shai what does SIGKILL mean
-shai how do I find which process is using port 8080
+seer how to list all datasets in a ZFS pool
+seer what does SIGKILL mean
+seer how do I find which process is using port 8080
 
-# Let shai do it — generates a command, shows it, asks before running
-shai do find the largest file in ~/Downloads
-shai do show disk usage by folder in /var
-shai do list all listening ports
+# Let seer do it — generates a command, shows it, asks before running
+seer do find the largest file in ~/Downloads
+seer do show disk usage by folder in /var
+seer do list all listening ports
 
 # Tip: quote the task if it contains apostrophes or special characters
-shai do "show all files modified in the last week"
-shai do "find the largest file and show it's size in MB"
+seer do "show all files modified in the last week"
+seer do "find the largest file and show it's size in MB"
 
 # Pipe output directly (no shell hook needed)
-kubectl get pods 2>&1 | shai
-journalctl -xe | shai why is nginx failing
+kubectl get pods 2>&1 | seer
+journalctl -xe | seer why is nginx failing
 
 # Skip context, ask a clean question
-shai --no-context explain the difference between hard and soft links
+seer --no-context explain the difference between hard and soft links
 
 # Raw output — no glow or rich rendering
-shai --raw how do I list open ports
-shai -r help
+seer --raw how do I list open ports
+seer -r help
 
 # Use a specific provider or model for one query
-shai -p anthropic help
-shai -p openai -m gpt-4o how do I list listening ports
+seer -p anthropic help
+seer -p openai -m gpt-4o how do I list listening ports
 ```
 
 ### Subcommands
 
 | Command | Description |
 |---|---|
-| `shai help` | Analyse your last terminal output and explain errors |
-| `shai do <task>` | Generate a shell command, preview it, confirm before running |
-| `shai /config` | Show the active config file, or create a default one |
-| `shai /context` | Show the full system prompt and captured terminal context |
-| `shai /stats` | Show provider, model, context size, and system info |
+| `seer help` | Analyse your last terminal output and explain errors |
+| `seer do <task>` | Generate a shell command, preview it, confirm before running |
+| `seer config` | Show the active config file, or create a default one |
+| `seer --context` | Show the full system prompt and captured terminal context |
+| `seer --stats` | Show provider, model, context size, and system info |
 
 ### Flags
 
@@ -138,10 +147,10 @@ shai -p openai -m gpt-4o how do I list listening ports
 
 Generate the default config file:
 ```bash
-shai /config
+seer config
 ```
 
-This creates `~/.config/shai/config.yaml`:
+This creates `~/.config/seer/config.yaml`:
 
 ```yaml
 provider: lmstudio        # active provider
@@ -194,18 +203,18 @@ providers:
 ## Development
 
 ```bash
-git clone https://github.com/zeddius1983/shai
-cd shai
+git clone https://github.com/zeddius1983/seer
+cd seer
 
 # Install dev environment
 uv sync
 
 # Run directly without installing
-.venv/bin/shai --help
+.venv/bin/seer --help
 
 # Build a wheel
 uv build
-# → dist/shai-1.0.0-py3-none-any.whl
+# → dist/seer-1.0.0-py3-none-any.whl
 ```
 
 
