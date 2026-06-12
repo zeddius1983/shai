@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# shai installer
+# seer installer
 #
 # Usage:
 #   Install:    bash setup.sh
 #   Uninstall:  bash setup.sh --uninstall
 #
 #   Via curl:
-#     curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash
+#     curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash
 
 set -euo pipefail
 
@@ -53,7 +53,7 @@ _backup_zshrc() {
   _ZSHRC_BACKED_UP=1
 }
 
-_zshrc_has() { grep -qF "shai-toolbox: $1" "$ZSHRC" 2>/dev/null; }
+_zshrc_has() { grep -qF "seer-toolbox: $1" "$ZSHRC" 2>/dev/null; }
 
 _zshrc_add() {
   local key="$1"; shift
@@ -63,9 +63,9 @@ _zshrc_add() {
   fi
   _backup_zshrc
   {
-    printf '\n# -- shai-toolbox: %s --\n' "$key"
+    printf '\n# -- seer-toolbox: %s --\n' "$key"
     printf '%s\n' "$@"
-    printf '# -- end shai-toolbox: %s --\n' "$key"
+    printf '# -- end seer-toolbox: %s --\n' "$key"
   } >> "$ZSHRC"
   info "Added $key to ~/.zshrc"
 }
@@ -76,7 +76,7 @@ _zshrc_remove() {
   _backup_zshrc
   local tmp
   tmp="$(mktemp)"
-  sed "/# -- shai-toolbox: ${key} --/,/# -- end shai-toolbox: ${key} --/d" "$ZSHRC" > "$tmp"
+  sed "/# -- seer-toolbox: ${key} --/,/# -- end seer-toolbox: ${key} --/d" "$ZSHRC" > "$tmp"
   mv "$tmp" "$ZSHRC"
   info "Removed $key from ~/.zshrc"
 }
@@ -85,8 +85,8 @@ _zshrc_remove() {
 # Install / Uninstall
 # ---------------------------------------------------------------------------
 
-install_shai() {
-  step "Installing shai..."
+install_seer() {
+  step "Installing seer..."
 
   if ! command -v uv >/dev/null 2>&1; then
     info "uv not found — installing..."
@@ -94,7 +94,7 @@ install_shai() {
     export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
   fi
 
-  local git_url="git+https://github.com/zeddius1983/shai.git"
+  local git_url="git+https://github.com/zeddius1983/seer.git"
   if [ -n "${REPO_URL:-}" ]; then
     if [[ "$REPO_URL" =~ ^https://raw\.githubusercontent\.com/([^/]+)/([^/]+)/(.+)$ ]]; then
       local owner="${BASH_REMATCH[1]}"
@@ -108,56 +108,56 @@ install_shai() {
   uv tool install "$git_url" --force --refresh
   export PATH="$(uv tool dir 2>/dev/null | sed 's|/tools$|/bin|'):$HOME/.local/bin:$PATH"
 
-  local _shai_path
-  _shai_path="$(command shai --shell-path zsh 2>/dev/null | xargs)"
-  if [ -z "$_shai_path" ]; then
-    warn "Could not determine shell integration path — add manually: source \"\$(shai --shell-path zsh)\""
+  local _seer_path
+  _seer_path="$(command seer --shell-path zsh 2>/dev/null | xargs)"
+  if [ -z "$_seer_path" ]; then
+    warn "Could not determine shell integration path — add manually: source \"\$(seer --shell-path zsh)\""
   else
-    _zshrc_remove "shai"
-    _zshrc_add "shai" "source \"$_shai_path\""
+    _zshrc_remove "seer"
+    _zshrc_add "seer" "source \"$_seer_path\""
   fi
 
-  local _config_path="${XDG_CONFIG_HOME:-$HOME/.config}/shai/config.yaml"
+  local _config_path="${XDG_CONFIG_HOME:-$HOME/.config}/seer/config.yaml"
   if [ ! -f "$_config_path" ]; then
-    shai config > /dev/null 2>&1 || true
+    seer config > /dev/null 2>&1 || true
     ok "Created default config: $_config_path"
   else
     info "$(dim "Config already exists — skipping: $_config_path")"
   fi
 
-  ok "shai installed"
+  ok "seer installed"
 }
 
-install_shai_implicit() {
-  local bind="${SHAI_IMPLICIT_BIND:-^@}"
-  step "Installing implicit mode (Ctrl+Space → shai)..."
-  _zshrc_remove "shai-implicit"
-  _zshrc_add "shai-implicit" \
-    "function _shai_implicit_mode() {" \
+install_seer_implicit() {
+  local bind="${SEER_IMPLICIT_BIND:-^@}"
+  step "Installing implicit mode (Ctrl+Space → seer)..."
+  _zshrc_remove "seer-implicit"
+  _zshrc_add "seer-implicit" \
+    "function _seer_implicit_mode() {" \
     "  if [[ -n \"\${BUFFER}\" ]]; then" \
-    "    BUFFER=\"shai \${BUFFER}\"" \
+    "    BUFFER=\"seer \${BUFFER}\"" \
     "    CURSOR=\${#BUFFER}" \
     "    zle accept-line" \
     "  fi" \
     "}" \
-    "zle -N _shai_implicit_mode" \
-    "bindkey '$bind' _shai_implicit_mode"
+    "zle -N _seer_implicit_mode" \
+    "bindkey '$bind' _seer_implicit_mode"
   ok "implicit mode installed"
 }
 
-uninstall_shai() {
-  step "Uninstalling shai..."
-  if command -v uv >/dev/null 2>&1 && uv tool list 2>/dev/null | grep -q "^shai "; then
-    uv tool uninstall shai 2>/dev/null || true
-    info "Removed shai (via uv)"
+uninstall_seer() {
+  step "Uninstalling seer..."
+  if command -v uv >/dev/null 2>&1 && uv tool list 2>/dev/null | grep -q "^seer "; then
+    uv tool uninstall seer 2>/dev/null || true
+    info "Removed seer (via uv)"
   fi
-  _zshrc_remove "shai"
-  ok "shai uninstalled"
+  _zshrc_remove "seer"
+  ok "seer uninstalled"
 }
 
-uninstall_shai_implicit() {
+uninstall_seer_implicit() {
   step "Uninstalling implicit mode..."
-  _zshrc_remove "shai-implicit"
+  _zshrc_remove "seer-implicit"
   ok "implicit mode uninstalled"
 }
 
@@ -179,11 +179,11 @@ main() {
   touch "$ZSHRC"
 
   if [ "$uninstall" -eq 1 ]; then
-    uninstall_shai_implicit
-    uninstall_shai
+    uninstall_seer_implicit
+    uninstall_seer
   else
-    install_shai
-    install_shai_implicit
+    install_seer
+    install_seer_implicit
   fi
 
   printf '\n%s\n\n' "$(green "$(bold '✓ Done!')")"

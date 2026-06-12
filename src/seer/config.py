@@ -6,14 +6,14 @@ from typing import Optional
 
 import httpx
 
-CONFIG_PATH = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "shai" / "config.yaml"
+CONFIG_PATH = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "seer" / "config.yaml"
 
 def _cache_dir() -> Path:
     if os.environ.get("XDG_CACHE_HOME"):
-        return Path(os.environ["XDG_CACHE_HOME"]) / "shai"
+        return Path(os.environ["XDG_CACHE_HOME"]) / "seer"
     if os.uname().sysname == "Darwin":
-        return Path.home() / "Library" / "Caches" / "shai"
-    return Path.home() / ".cache" / "shai"
+        return Path.home() / "Library" / "Caches" / "seer"
+    return Path.home() / ".cache" / "seer"
 
 CONTEXT_FILE = _cache_dir() / "context"
 
@@ -66,7 +66,7 @@ def _list_openai_models(base_url: str, api_key: str) -> list[str]:
         pass
     return []
 
-SYSTEM_PROMPT = """You are shai, a concise shell assistant embedded in the user's terminal.
+SYSTEM_PROMPT = """You are seer, a concise shell assistant embedded in the user's terminal.
 
 ## Formatting rules (always follow these)
 - Always respond in well-structured Markdown.
@@ -89,7 +89,7 @@ When given terminal context (error analysis mode):
 When asked a question (no context):
 - Answer directly and concisely using the formatting rules above."""
 
-DO_SYSTEM_PROMPT = """You are shai, a shell command assistant. The user wants you to perform a task on their system.
+DO_SYSTEM_PROMPT = """You are seer, a shell command assistant. The user wants you to perform a task on their system.
 
 Your response must follow this exact structure:
 1. One or two sentences explaining what the command will do.

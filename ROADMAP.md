@@ -1,4 +1,4 @@
-# shai Roadmap
+# SEER Roadmap
 
 ---
 
@@ -6,7 +6,7 @@
 
 **Shell Integration**
 - zsh and bash support via shell hooks (`precmd` / `PROMPT_COMMAND`)
-- Implicit mode: type a question at the prompt and press `Ctrl+Space` to invoke shai
+- Implicit mode: type a question at the prompt and press `Ctrl+Space` to invoke seer
 - Installer script with automatic `uv` setup and shell integration
 - Uninstall / setup menu
 
@@ -14,14 +14,14 @@
 - tmux pane capture (full scrollback, takes priority)
 - Hook-based fallback: last command + exit code
 - Shell history fallback
-- Piped input support (`cmd 2>&1 | shai`)
+- Piped input support (`cmd 2>&1 | seer`)
 
-**Error Analysis Mode (`shai help`)**
+**Error Analysis Mode (`seer help`)**
 - Automatic error detection from terminal context
 - System info auto-population (OS, CPU arch, shell, package managers)
 - Responses tailored to the user's platform
 
-**Command Generation Mode (`shai do`)**
+**Command Generation Mode (`seer do`)**
 - Natural language → shell command with syntax highlighting
 - Safety warnings for destructive or privileged commands
 - macOS vs Linux compatibility warnings
@@ -41,8 +41,8 @@
 - Custom OpenAI-compatible endpoints
 
 **Diagnostics**
-- `shai info` — active provider, model, context stats, system specs
-- `shai config` — print config path and contents
+- `seer info` — active provider, model, context stats, system specs
+- `seer config` — print config path and contents
 
 ---
 
@@ -91,9 +91,9 @@ providers:
 
 ### Brave Mode
 
-An autonomous execution mode where shai plans the necessary commands, runs them, and returns an interpreted result — rather than suggesting a command for the user to run manually.
+An autonomous execution mode where seer plans the necessary commands, runs them, and returns an interpreted result — rather than suggesting a command for the user to run manually.
 
-**Example:** `shai find the largest file here` → shai runs `find` + `du` + `sort`, captures output, and responds with a human-readable answer.
+**Example:** `seer find the largest file here` → seer runs `find` + `du` + `sort`, captures output, and responds with a human-readable answer.
 
 **Mode system**
 
@@ -103,7 +103,7 @@ A new top-level `mode` config key controls the default behaviour:
 |---|---|
 | `default` | Current behaviour — suggest commands, never execute autonomously |
 | `brave` | Always use brave mode — plan, execute, interpret |
-| `auto` | shai infers the desired mode from the query (e.g. questions → brave, `do`-style tasks → default) |
+| `auto` | seer infers the desired mode from the query (e.g. questions → brave, `do`-style tasks → default) |
 
 ```yaml
 mode: auto   # default | brave | auto
@@ -114,14 +114,14 @@ mode: auto   # default | brave | auto
 `--brave` / `-b` flag forces brave mode for a single query regardless of config:
 
 ```
-shai --brave find the largest file here
-shai -b what is eating my disk space
+seer --brave find the largest file here
+seer -b what is eating my disk space
 ```
 
 **Execution model**
 - LLM receives the query and generates a plan (sequence of shell commands)
-- shai executes each command and feeds stdout/stderr back to the LLM
-- Before any write or destructive command, shai pauses and prompts for confirmation (`[Y/n/e]`)
+- seer executes each command and feeds stdout/stderr back to the LLM
+- Before any write or destructive command, seer pauses and prompts for confirmation (`[Y/n/e]`)
 - Read-only commands run without interruption
 - LLM produces a final human-readable summary
 - `--raw` / `-r` outputs plain text (no Markdown formatting)
@@ -130,12 +130,12 @@ shai -b what is eating my disk space
 
 ### Pipe-Aware Output
 
-When shai's stdout is not a TTY (i.e. the output is being piped), automatically switch to plain text mode:
+When seer's stdout is not a TTY (i.e. the output is being piped), automatically switch to plain text mode:
 - Disable glow and rich rendering
 - Instruct the LLM to respond with factual, unformatted output suitable for further processing
 - Applies to all modes, including brave mode
 
 ```
-shai what docker containers are running | grep local
-shai --brave find the largest log file | xargs wc -l
+seer what docker containers are running | grep local
+seer --brave find the largest log file | xargs wc -l
 ```

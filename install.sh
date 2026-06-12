@@ -1,28 +1,28 @@
 #!/usr/bin/env bash
-# shai installer bootstrapper
+# seer installer bootstrapper
 #
 # Usage:
-#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh)"
+#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh)"
 #
 #   Silent / Non-interactive:
-#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --all
+#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --all
 #
 #   Specific version (tag or branch):
-#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/shai/main/install.sh | bash -s -- --version v1.1.0
+#   curl -fsSL https://raw.githubusercontent.com/zeddius1983/seer/main/install.sh | bash -s -- --version v1.1.0
 
 set -euo pipefail
 
 # Parse --version from args; everything else is passed through to setup.sh
-SHAI_VERSION=""
+SEER_VERSION=""
 PASSTHROUGH_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version)
-      SHAI_VERSION="${2:-}"
+      SEER_VERSION="${2:-}"
       shift 2
       ;;
     --version=*)
-      SHAI_VERSION="${1#--version=}"
+      SEER_VERSION="${1#--version=}"
       shift
       ;;
     *)
@@ -37,9 +37,9 @@ if [ -f "$(dirname "$0")/shell/setup.sh" ]; then
     exec "$(dirname "$0")/shell/setup.sh" "${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}"
 fi
 
-REPO_BASE="https://raw.githubusercontent.com/zeddius1983/shai"
-if [ -n "$SHAI_VERSION" ]; then
-  REPO_URL="$REPO_BASE/$SHAI_VERSION"
+REPO_BASE="https://raw.githubusercontent.com/zeddius1983/seer"
+if [ -n "$SEER_VERSION" ]; then
+  REPO_URL="$REPO_BASE/$SEER_VERSION"
 else
   REPO_URL="${REPO_URL:-$REPO_BASE/main}"
 fi
@@ -49,7 +49,7 @@ TMP_DIR="$(mktemp -d)"
 # Cleanup on exit
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-echo "==> Downloading Shai Toolbox Installer..."
+echo "==> Downloading SEER Installer..."
 mkdir -p "$TMP_DIR/shell"
 
 curl -sSLo "$TMP_DIR/shell/setup.sh" "$REPO_URL/shell/setup.sh"

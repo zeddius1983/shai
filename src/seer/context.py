@@ -1,5 +1,5 @@
 """
-Terminal context capture for shai.
+Terminal context capture for seer.
 
 Priority order:
   1. Piped stdin (most explicit)
@@ -13,8 +13,9 @@ import select
 import stat as stat_module
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Generator, Optional, Tuple
 
 from .config import CONTEXT_FILE
 
@@ -23,7 +24,8 @@ def get_context(lines: int = 100) -> Optional[str]:
     """Return the best available terminal context string, or None."""
     # 1. Piped stdin — only consume if data is actually available
     if not sys.stdin.isatty() and _stdin_has_data():
-        return sys.stdin.read().strip() or None
+        data, _ = _read_stdin_until_idle()
+        return data.strip() or None
 
     # 2. tmux capture — always reflects the current live pane output
     tmux_ctx = _tmux_capture(lines)
@@ -38,6 +40,57 @@ def get_context(lines: int = 100) -> Optional[str]:
 
     # 4. Shell history fallback
     return _history_fallback(10)
+
+
+def _read_stdin_until_idle(idle_timeout: float = 1.0) -> Tuple[str, bool]:
+    """Read stdin until no new data arrives for idle_timeout seconds.
+
+    Returns (data, got_eof). got_eof=False means the pipe is still open
+    (e.g. tail -f) — the caller should treat this as a streaming source.
+    """
+    fd = sys.stdin.fileno()
+    chunks = []
+    got_eof = False
+    while True:
+        ready, _, _ = select.select([sys.stdin], [], [], idle_timeout)
+        if not ready:
+            break
+        chunk = os.read(fd, 65536)
+        if not chunk:  # EOF
+            got_eof = True
+            break
+        chunks.append(chunk.decode("utf-8", errors="replace"))
+    return "".join(chunks), got_eof
+
+
+def read_stdin_batches(interval: float = 15.0) -> Generator[str, None, None]:
+    """Yield batches of stdin lines on a fixed time window.
+
+    Collects for `interval` seconds then yields whatever arrived.
+    Empty windows are skipped. Stops on EOF (pipe closed).
+    Intended for infinite streams like `tail -f`.
+    """
+    fd = sys.stdin.fileno()
+    while True:
+        chunks = []
+        deadline = time.monotonic() + interval
+        eof = False
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            ready, _, _ = select.select([sys.stdin], [], [], min(remaining, 0.5))
+            if ready:
+                chunk = os.read(fd, 65536)
+                if not chunk:
+                    eof = True
+                    break
+                chunks.append(chunk.decode("utf-8", errors="replace"))
+        data = "".join(chunks)
+        if data.strip():
+            yield data
+        if eof:
+            break
 
 
 def _stdin_has_data() -> bool:

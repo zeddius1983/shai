@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import patch, call
 
-from shai.config import Config, ProviderConfig, _list_openai_models
+from seer.config import Config, ProviderConfig, _list_openai_models
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ ANTHROPIC_CLOUD = {
 class TestListOpenaiModels:
     def test_returns_model_ids_on_success(self):
         mock_resp = {"data": [{"id": "gemma-3"}, {"id": "llama3"}]}
-        with patch("shai.config.httpx.get") as mock_get:
+        with patch("seer.config.httpx.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = mock_resp
 
@@ -67,16 +67,16 @@ class TestListOpenaiModels:
         )
 
     def test_returns_empty_on_non_200(self):
-        with patch("shai.config.httpx.get") as mock_get:
+        with patch("seer.config.httpx.get") as mock_get:
             mock_get.return_value.status_code = 503
             assert _list_openai_models("http://127.0.0.1:1234/v1", "key") == []
 
     def test_returns_empty_on_connection_error(self):
-        with patch("shai.config.httpx.get", side_effect=Exception("connection refused")):
+        with patch("seer.config.httpx.get", side_effect=Exception("connection refused")):
             assert _list_openai_models("http://127.0.0.1:1234/v1", "key") == []
 
     def test_strips_trailing_slash_from_base_url(self):
-        with patch("shai.config.httpx.get") as mock_get:
+        with patch("seer.config.httpx.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = {"data": [{"id": "m1"}]}
 
@@ -87,7 +87,7 @@ class TestListOpenaiModels:
 
     def test_skips_entries_without_id(self):
         mock_resp = {"data": [{"id": "good-model"}, {"name": "no-id-field"}]}
-        with patch("shai.config.httpx.get") as mock_get:
+        with patch("seer.config.httpx.get") as mock_get:
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = mock_resp
 
@@ -111,7 +111,7 @@ class TestAutoProvider:
                 return ["gemma-3"]  # lmstudio up
             return ["llama3"]
 
-        with patch("shai.config._list_openai_models", side_effect=probe):
+        with patch("seer.config._list_openai_models", side_effect=probe):
             pcfg = cfg.get_active_provider()
 
         assert pcfg.name == "lmstudio"
@@ -121,7 +121,7 @@ class TestAutoProvider:
             "openai": OPENAI_CLOUD,     # no base_url
             "lmstudio": LMSTUDIO,
         })
-        with patch("shai.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
+        with patch("seer.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
             pcfg = cfg.get_active_provider()
 
         assert pcfg.name == "lmstudio"
@@ -134,7 +134,7 @@ class TestAutoProvider:
             "anthropic": ANTHROPIC_CLOUD,
             "lmstudio": LMSTUDIO,
         })
-        with patch("shai.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
+        with patch("seer.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
             cfg.get_active_provider()
 
         for c in mock_probe.call_args_list:
@@ -142,13 +142,13 @@ class TestAutoProvider:
 
     def test_raises_when_no_provider_reachable(self):
         cfg = _make_config("auto", {"llamacpp": LLAMACPP, "lmstudio": LMSTUDIO})
-        with patch("shai.config._list_openai_models", return_value=[]):
+        with patch("seer.config._list_openai_models", return_value=[]):
             with pytest.raises(ValueError, match="no configured provider is reachable"):
                 cfg.get_active_provider()
 
     def test_resolved_name_set_on_provider_config(self):
         cfg = _make_config("auto", {"lmstudio": LMSTUDIO})
-        with patch("shai.config._list_openai_models", return_value=["gemma-3"]):
+        with patch("seer.config._list_openai_models", return_value=["gemma-3"]):
             pcfg = cfg.get_active_provider()
         assert pcfg.name == "lmstudio"
 
@@ -160,21 +160,21 @@ class TestAutoProvider:
 class TestAutoModel:
     def test_resolves_to_first_model_in_list(self):
         cfg = _make_config("lmstudio", {"lmstudio": LMSTUDIO})
-        with patch("shai.config._list_openai_models", return_value=["gemma-3", "llama3"]):
+        with patch("seer.config._list_openai_models", return_value=["gemma-3", "llama3"]):
             pcfg = cfg.get_active_provider()
         assert pcfg.model == "gemma-3"
         assert pcfg.model_was_auto is True
 
     def test_raises_when_model_list_empty(self):
         cfg = _make_config("lmstudio", {"lmstudio": LMSTUDIO})
-        with patch("shai.config._list_openai_models", return_value=[]):
+        with patch("seer.config._list_openai_models", return_value=[]):
             with pytest.raises(ValueError, match="model: auto"):
                 cfg.get_active_provider()
 
     def test_explicit_model_bypasses_probe(self):
         explicit = {**LMSTUDIO, "model": "my-model"}
         cfg = _make_config("lmstudio", {"lmstudio": explicit})
-        with patch("shai.config._list_openai_models") as mock_probe:
+        with patch("seer.config._list_openai_models") as mock_probe:
             pcfg = cfg.get_active_provider()
         mock_probe.assert_not_called()
         assert pcfg.model == "my-model"
@@ -188,7 +188,7 @@ class TestAutoModel:
 class TestAutoProviderAndModel:
     def test_single_http_probe_for_both(self):
         cfg = _make_config("auto", {"lmstudio": LMSTUDIO})
-        with patch("shai.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
+        with patch("seer.config._list_openai_models", return_value=["gemma-3"]) as mock_probe:
             pcfg = cfg.get_active_provider()
 
         assert mock_probe.call_count == 1
@@ -206,7 +206,7 @@ class TestAutoProviderAndModel:
         def probe(base_url, api_key):
             return ["llama3"] if "11434" in base_url else []
 
-        with patch("shai.config._list_openai_models", side_effect=probe):
+        with patch("seer.config._list_openai_models", side_effect=probe):
             pcfg = cfg.get_active_provider()
 
         assert pcfg.name == "ollama"
@@ -221,7 +221,7 @@ class TestExplicitProvider:
     def test_explicit_provider_explicit_model(self):
         raw = {**LMSTUDIO, "model": "gemma-3"}
         cfg = _make_config("lmstudio", {"lmstudio": raw})
-        with patch("shai.config._list_openai_models") as mock_probe:
+        with patch("seer.config._list_openai_models") as mock_probe:
             pcfg = cfg.get_active_provider()
         mock_probe.assert_not_called()
         assert pcfg.model == "gemma-3"

@@ -20,7 +20,7 @@ from rich.table import Table
 from .config import load_config, save_default_config, CONFIG_PATH, DO_SYSTEM_PROMPT
 from .config import CONTEXT_FILE
 from .system_info import format_for_prompt, get_system_info
-from .context import get_context
+from .context import get_context, read_stdin_batches, _stdin_has_data, _read_stdin_until_idle
 from .providers import get_provider
 console = Console()
 err_console = Console(stderr=True)
@@ -182,19 +182,19 @@ def stream_response(system: str, prompt: str, cfg, raw: bool = False) -> None:
 )
 @click.pass_context
 def main(ctx, query, no_context, raw, provider, model, stats, show_context, shell_path):
-    """shai — Shell AI assistant.
+    """seer — Shell Enhanced Execution & Reasoning.
 
     \b
     Examples:
-      shai help                    # explain the last error in your terminal
-      shai how do I list open ports
-      git pull-request 2>&1 | shai # pipe any output as context
-      shai config                  # show/init config file
-      shai --stats                 # show provider, model, and system info
+      seer help                    # explain the last error in your terminal
+      seer how do I list open ports
+      git pull-request 2>&1 | seer # pipe any output as context
+      seer config                  # show/init config file
+      seer --stats                 # show provider, model, and system info
     """
     # --shell-path: print path to the integration script
     if shell_path:
-        script = Path(__file__).parent / "shell" / f"shai.{shell_path}"
+        script = Path(__file__).parent / "shell" / f"seer.{shell_path}"
         click.echo(str(script.resolve()))
         return
 
@@ -210,7 +210,7 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
 
     if args and args[0].startswith("--"):
         err_console.print(f"[red]Unknown option:[/red] {args[0]}")
-        err_console.print("Run [bold]shai --help[/bold] to see available options.")
+        err_console.print("Run [bold]seer --help[/bold] to see available options.")
         sys.exit(1)
 
     # config subcommand
@@ -222,7 +222,7 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
         cfg = load_config()
     except Exception as e:
         err_console.print(f"[red]Config error:[/red] {e}")
-        err_console.print(f"Run [bold]shai config[/bold] to generate a default config.")
+        err_console.print(f"Run [bold]seer config[/bold] to generate a default config.")
         sys.exit(1)
 
     # Apply CLI overrides
@@ -236,7 +236,7 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
     if args and args[0] == "do":
         task = " ".join(args[1:])
         if not task:
-            err_console.print("[red]Usage:[/red] shai do <task description>")
+            err_console.print("[red]Usage:[/red] seer do <task description>")
             sys.exit(1)
         try:
             system = DO_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
@@ -292,21 +292,29 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
     else:
         question = " ".join(args)
 
+    # Detect streaming stdin (tail -f etc.) before consuming it
+    if not no_context and not sys.stdin.isatty() and _stdin_has_data():
+        first_batch, got_eof = _read_stdin_until_idle(idle_timeout=1.0)
+        if not got_eof:
+            # Pipe is still open — enter watch mode
+            focus = " ".join(args) if args and args not in (["help"], []) else None
+            _cmd_watch(first_batch, focus, cfg, raw)
+            return
+        # Regular pipe — use what we already read as context
+        context = first_batch.strip() or None
     # Gather context — always for help mode, skip for plain questions unless piped
-    if no_context:
+    elif no_context:
         context = None
     elif is_help:
         context = get_context(cfg.context_lines)
     else:
-        # For questions, only use context if explicitly piped (real FIFO/file on stdin)
-        from .context import _stdin_has_data
-        context = get_context(cfg.context_lines) if _stdin_has_data() else None
+        context = None
 
     if context is None and not no_context and is_help:
         err_console.print(
             "[yellow]No terminal context found.[/yellow] "
-            "Source the shai shell integration or run inside tmux.\n"
-            "Tip: pipe output directly with [bold]cmd 2>&1 | shai[/bold]"
+            "Source the seer shell integration or run inside tmux.\n"
+            "Tip: pipe output directly with [bold]cmd 2>&1 | seer[/bold]"
         )
 
     prompt = build_prompt(question, context)
@@ -317,6 +325,44 @@ def main(ctx, query, no_context, raw, provider, model, stats, show_context, shel
     except Exception as e:
         err_console.print(f"[red]Error:[/red] {e}")
         sys.exit(1)
+
+
+WATCH_SYSTEM_PROMPT = (
+    "You are monitoring a live stream of log lines. "
+    "For each batch, report anything notable: errors, warnings, unusual patterns, "
+    "repeated failures, or signs of misconfiguration. Be concise. "
+    "If the batch looks normal, say so in one line."
+)
+
+WATCH_INTERVAL = 15.0
+
+
+def _cmd_watch(first_batch: str, focus: Optional[str], cfg, raw: bool) -> None:
+    """Watch mode: process stdin in batches, sending each to the LLM."""
+    system = WATCH_SYSTEM_PROMPT + "\n\n" + format_for_prompt()
+    if focus:
+        system += f"\n\nUser focus: {focus}"
+
+    err_console.print("[dim]Watch mode — press Ctrl+C to stop.[/dim]\n")
+
+    def process_batch(batch: str, n: int) -> None:
+        err_console.print(f"[dim]─── batch {n} ({'%.0f' % WATCH_INTERVAL}s window) ───[/dim]")
+        prompt = f"Log lines:\n```\n{batch.strip()}\n```"
+        try:
+            stream_response(system, prompt, cfg, raw=raw)
+        except Exception as e:
+            err_console.print(f"[red]Error:[/red] {e}")
+
+    try:
+        batch_num = 1
+        if first_batch.strip():
+            process_batch(first_batch, batch_num)
+            batch_num += 1
+        for batch in read_stdin_batches(WATCH_INTERVAL):
+            process_batch(batch, batch_num)
+            batch_num += 1
+    except KeyboardInterrupt:
+        err_console.print("\n[dim]Watch mode ended.[/dim]")
 
 
 def _cmd_config():
@@ -413,4 +459,4 @@ def _cmd_stats(provider_override, model_override):
     t.add_row("Memory", sys_info["memory"])
     t.add_row("Package manager", sys_info["package_manager"] or "[dim]none detected[/dim]")
 
-    console.print(Panel(t, title="[bold green]shai stats[/bold green]", border_style="green"))
+    console.print(Panel(t, title="[bold green]seer stats[/bold green]", border_style="green"))
